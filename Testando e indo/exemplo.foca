@@ -1,0 +1,9 @@
+int main() {
+	int a;
+    int b;
+	a = (5 + 3) * 2;
+    b = (a + 3) + 4;
+    int a = 1;
+    int a;
+}
+
