@@ -197,6 +197,17 @@ EXPR:
 		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
 		adicionaVar(temp, tipo_result);
 	}
+	| '-' EXPR %prec UMINUS {
+	string temp = "t" + to_string(tempVar++);
+	stringstream ss;
+	ss << "\t" << temp << " = -" << $2.label << ";\n";
+	$$.label = temp;
+	$$.traducao = $2.traducao + ss.str();
+
+	// Inferir tipo baseado em $2
+	string tipo = tabela_simbolos[$2.label].tipo;
+	adicionaVar(temp, tipo);
+	}
 
 	| EXPR '-' EXPR {
 		string temp = "t" + to_string(tempVar++);
