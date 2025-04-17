@@ -18,11 +18,11 @@ ID {LETRA}({LETRA}|{DIGITO})*
 
 %%
 
-"main"      { return TK_MAIN; }
-"int"       { return TK_TIPO_INT; }
-"float"     { return TK_TIPO_FLOAT; }
-"char"      return TK_TIPO_CHAR;
-"bool"      return TK_TIPO_BOOL;
+"main"      { return TK_MAIN;}
+"int"       { return TK_TIPO_INT;}
+"float"     { return TK_TIPO_FLOAT;}
+"char"      { return TK_TIPO_CHAR;}
+"bool"      { return TK_TIPO_BOOL;}
 
 
 "true"      {
