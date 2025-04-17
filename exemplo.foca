@@ -1,6 +1,6 @@
 int main() {
     int x = 1;
-    int y = 9;
+    int y = 96;
     int z = x + y;
 }
 
