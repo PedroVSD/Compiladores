@@ -9,11 +9,12 @@
 
 using namespace std;
 
-void adicionaVar(string nome, string tipo);
+void adicionaVar(string nome, string tipo, bool temp = false);
 
 int tempVar = 0;
-set<string> variaveisDeclaradas;
-set<string> variaveisGlobaisDeclaradas;
+int defVar = 0;
+//set<string> variaveisDeclaradas;
+//set<string> variaveisGlobaisDeclaradas;
 
 struct atributos {
 	string label;
@@ -22,9 +23,8 @@ struct atributos {
 
 struct tabela{
 	string tipo;
-	string nome;
 	string endereco_memoria;
-	bool existe;
+	bool temporaria;
 };
 
 map<string, tabela> tabela_simbolos;
@@ -48,21 +48,28 @@ void yyerror(string);
 
 S:
 	  TK_TIPO_INT TK_MAIN '(' ')' BLOCO {
-		cout << "/*Compilador FOCA*/\n";
-		cout << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\n";
+		cout << "/*Compilador DHP*/\n";
+		cout << "\n#include<string.h>\n#include<stdio.h>\n";
 		cout << "int main(void)\n{\n";
 
+		for (const auto& [nome, info] : tabela_simbolos) {
+			if (!(info.temporaria)) {
+    			cout << "\t" <<info.tipo << " " << info.endereco_memoria << ";\t //Variavel: "<< nome << "\n";}
+			else {
+				cout << "\t" << info.tipo << " " << info.endereco_memoria << ";\n";}
+		}
+/*
 		for (auto& v : variaveisGlobaisDeclaradas)
 			cout << "\t" << tabela_simbolos[v].tipo << " " << v << ";\n";
 
 
 		for (auto& v : variaveisDeclaradas){
 			if (variaveisGlobaisDeclaradas.count(v) == 0){
-				cout << "\t" << tabela_simbolos[v].tipo << " " << v << ";\n";
+				cout << "\t" << tabela_simbolos[v].tipo << " " << v << ";"\n";
 			}
 		}
-
-		cout << $5.traducao;
+*/
+		cout << "\n" << $5.traducao << "\n";
 		cout << "\treturn 0;\n}\n";
 	  }
 ;
@@ -89,83 +96,45 @@ COMANDO:
 
 DECLARACAO:
 	  TK_TIPO_INT TK_ID {
-		if (variaveisGlobaisDeclaradas.count($2.label)) {
-			cout << "Erro: Variável " << $2.label << " já declarada.\n";
-			exit(1);
-		}
 		adicionaVar($2.label, "int");
-		variaveisGlobaisDeclaradas.insert($2.label);
 		$$.traducao = "";
 	  }
 	| TK_TIPO_INT TK_ID '=' EXPR {
-		if (variaveisGlobaisDeclaradas.count($2.label)) {
-			cout << "Erro: Variável " << $2.label << " já declarada.\n";
-			exit(1);
-		}
+
 		adicionaVar($2.label, "int");
-		variaveisGlobaisDeclaradas.insert($2.label);
 		stringstream ss;
-		ss << "\t" << $2.label << " = " << $4.label << ";\n";
+		ss << "\t" << tabela_simbolos[$2.label].endereco_memoria << " = " << $4.label << ";\n";
 		$$.traducao = $4.traducao + ss.str();
 	  }
 	| TK_TIPO_FLOAT TK_ID {
-		if (variaveisGlobaisDeclaradas.count($2.label)) {
-			cout << "Erro: Variável " << $2.label << " já declarada.\n";
-			exit(1);
-		}
 		adicionaVar($2.label, "float");
-		variaveisGlobaisDeclaradas.insert($2.label);
 		$$.traducao = "";
 	  }
 	| TK_TIPO_FLOAT TK_ID '=' EXPR {
-		if (variaveisGlobaisDeclaradas.count($2.label)) {
-			cout << "Erro: Variável " << $2.label << " já declarada.\n";
-			exit(1);
-		}
+
 		adicionaVar($2.label, "float");
-		variaveisGlobaisDeclaradas.insert($2.label);
 		stringstream ss;
-		ss << "\t" << $2.label << " = " << $4.label << ";\n";
+		ss << "\t" << tabela_simbolos[$2.label].endereco_memoria << " = " << $4.label << ";\n";
 		$$.traducao = $4.traducao + ss.str();
 	  }
 	| TK_TIPO_CHAR TK_ID {
-		if (variaveisGlobaisDeclaradas.count($2.label)) {
-			cout << "Erro: Variável " << $2.label << " já declarada.\n";
-			exit(1);
-		}
 		adicionaVar($2.label, "char");
-		variaveisGlobaisDeclaradas.insert($2.label);
 		$$.traducao = "";
 	}	
 	| TK_TIPO_CHAR TK_ID '=' TK_CHAR {
-		if (variaveisGlobaisDeclaradas.count($2.label)) {
-			cout << "Erro: Variável " << $2.label << " já declarada.\n";
-			exit(1);
-		}
 		adicionaVar($2.label, "char");
-		variaveisGlobaisDeclaradas.insert($2.label);
 		stringstream ss;
-		ss << "\t" << $2.label << " = " << $4.label << ";\n";
+		ss << "\t" << tabela_simbolos[$2.label].endereco_memoria << " = " << $4.label << ";\n";
 		$$.traducao = ss.str();
 	}
 	| TK_TIPO_BOOL TK_ID {
-		if (variaveisGlobaisDeclaradas.count($2.label)) {
-			cout << "Erro: Variável " << $2.label << " já declarada.\n";
-			exit(1);
-		}
 		adicionaVar($2.label, "bool");
-		variaveisGlobaisDeclaradas.insert($2.label);
 		$$.traducao = "";
 	}
 	| TK_TIPO_BOOL TK_ID '=' EXPR {
-		if (variaveisGlobaisDeclaradas.count($2.label)) {
-			cout << "Erro: Variável " << $2.label << " já declarada.\n";
-			exit(1);
-		}
 		adicionaVar($2.label, "bool");
-		variaveisGlobaisDeclaradas.insert($2.label);
 		stringstream ss;
-		ss << "\t" << $2.label << " = " << $4.label << ";\n";
+		ss << "\t" << tabela_simbolos[$2.label].endereco_memoria << " = " << $4.label << ";\n";
 		$$.traducao = $4.traducao + ss.str();
 	}
 
@@ -177,7 +146,7 @@ ATRIB: TK_ID '=' EXPR {
 		exit(1);
 	}
 	stringstream ss;
-	ss << "\t" << $1.label << " = " << $3.label << ";\n";
+	ss << "\t" << tabela_simbolos[$1.label].endereco_memoria << " = " << $3.label << ";\n";
 	$$.traducao = $3.traducao + ss.str();
 }
 
@@ -185,9 +154,9 @@ ATRIB: TK_ID '=' EXPR {
 
 EXPR:
 	  EXPR '+' EXPR {
-		string temp = "t" + to_string(tempVar++);
+		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		ss << "\t" << temp << " = " << $1.label << " + " << $3.label << ";\n";
+		ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " + " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
 		$$.label = temp;
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 
@@ -195,10 +164,10 @@ EXPR:
 		string tipo1 = tabela_simbolos[$1.label].tipo;
 		string tipo2 = tabela_simbolos[$3.label].tipo;
 		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, tipo_result);
+		adicionaVar(temp, tipo_result, true);
 	}
 	| '-' EXPR %prec UMINUS {
-	string temp = "t" + to_string(tempVar++);
+	string temp = "t" + to_string(tempVar);
 	stringstream ss;
 	ss << "\t" << temp << " = -" << $2.label << ";\n";
 	$$.label = temp;
@@ -206,39 +175,39 @@ EXPR:
 
 	// Inferir tipo baseado em $2
 	string tipo = tabela_simbolos[$2.label].tipo;
-	adicionaVar(temp, tipo);
+	adicionaVar(temp, tipo, true);
 	}
 
 	| EXPR '-' EXPR {
-		string temp = "t" + to_string(tempVar++);
+		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		ss << "\t" << temp << " = " << $1.label << " - " << $3.label << ";\n";
+		ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " - " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
 		$$.label = temp;
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 
 		string tipo1 = tabela_simbolos[$1.label].tipo;
 		string tipo2 = tabela_simbolos[$3.label].tipo;
 		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, tipo_result);
+		adicionaVar(temp, tipo_result, true);
 	}
 
 	| EXPR '*' EXPR {
-		string temp = "t" + to_string(tempVar++);
+		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		ss << "\t" << temp << " = " << $1.label << " * " << $3.label << ";\n";
+		ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " * " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
 		$$.label = temp;
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 
 		string tipo1 = tabela_simbolos[$1.label].tipo;
 		string tipo2 = tabela_simbolos[$3.label].tipo;
 		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, tipo_result);
+		adicionaVar(temp, tipo_result, true);
 	}
 
 	| EXPR '/' EXPR {
-		string temp = "t" + to_string(tempVar++);
+		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		ss << "\t" << temp << " = " << $1.label << " / " << $3.label << ";\n";
+		ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " / " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
 		$$.label = temp;
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 
@@ -252,7 +221,7 @@ EXPR:
 		$$ = $2;
 	}
 	| TK_NUM {
-		string temp = "t" + to_string(tempVar++);
+		string temp = "t" + to_string(tempVar);
 		stringstream ss;
 		ss << "\t" << temp << " = " << $1.traducao << ";\n";
 		$$.label = temp;
@@ -263,7 +232,7 @@ EXPR:
 					($1.traducao == "true" || $1.traducao == "false") ? "bool" :
 					($1.traducao.front() == '\'' && $1.traducao.back() == '\'') ? "char" : "int";
 
-		adicionaVar(temp, tipo);
+		adicionaVar(temp, tipo, true);
 	}
 
 	| TK_ID {
@@ -275,29 +244,29 @@ EXPR:
 		$$.traducao = "";
 	}
 	| TK_CHAR {
-		string temp = "t" + to_string(tempVar++);
+		string temp = "t" + to_string(tempVar);
 		stringstream ss;
 		ss << "\t" << temp << " = " << $1.label << ";\n";
 		$$.label = temp;
 		$$.traducao = ss.str();
-		adicionaVar(temp, "char"); // <--- aqui
+		adicionaVar(temp, "char", true); // <--- aqui
 	}
 
 	| TK_BOOL_TRUE {
-		string temp = "t" + to_string(tempVar++);
+		string temp = "t" + to_string(tempVar);
 		stringstream ss;
 		ss << "\t" << temp << " = true;\n";
 		$$.label = temp;
 		$$.traducao = ss.str();
-		adicionaVar(temp, "bool"); // <--- aqui
+		adicionaVar(temp, "bool", true); // <--- aqui
 	}
 	| TK_BOOL_FALSE {
-		string temp = "t" + to_string(tempVar++);
+		string temp = "t" + to_string(tempVar);
 		stringstream ss;
 		ss << "\t" << temp << " = false;\n";
 		$$.label = temp;
 		$$.traducao = ss.str();
-		adicionaVar(temp, "bool"); // <--- aqui
+		adicionaVar(temp, "bool", true); // <--- aqui
 	}
 
 ;
@@ -318,13 +287,15 @@ void yyerror(string MSG) {
 	exit(1);
 }
 
-void adicionaVar(string nome, string tipo){
+void adicionaVar(string nome, string tipo, bool temp) {
 	if (tabela_simbolos.find(nome) == tabela_simbolos.end()) {
 		tabela_simbolos[nome].tipo = tipo;
-		tabela_simbolos[nome].nome = nome;
-		tabela_simbolos[nome].endereco_memoria = nome;  // pode ser t0, x, etc.
-		tabela_simbolos[nome].existe = true;
-		variaveisDeclaradas.insert(nome);
+		tabela_simbolos[nome].temporaria = temp;
+		if (temp) {
+			tabela_simbolos[nome].endereco_memoria = "t" + to_string(tempVar++);
+		} else {
+			tabela_simbolos[nome].endereco_memoria = "d" + to_string(defVar++);
+		}
 	} else {
 		cout << "Erro: Variável " << nome << " já declarada." << endl;
 		exit(1);
