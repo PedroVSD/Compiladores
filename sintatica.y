@@ -60,10 +60,11 @@ S:
 		cout << "int main(void)\n{\n";
 
 		for (const auto& [nome, info] : tabela_simbolos) {
+			string tipo = (info.tipo == "bool") ? "int" : info.tipo;
 			if (!(info.temporaria)) {
-    			cout << "\t" <<info.tipo << " " << info.endereco_memoria << ";\t //Variavel: "<< nome << "\n";}
+    			cout << "\t" << tipo  << " " << info.endereco_memoria << ";\t //Variavel: "<< nome << "\n";}
 			else {
-				cout << "\t" << info.tipo << " " << info.endereco_memoria << ";\n";}
+				cout << "\t" << tipo << " " << info.endereco_memoria << ";\n";}
 		}
 
 		cout << "\n" << $5.traducao << "\n";
