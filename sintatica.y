@@ -9,7 +9,10 @@
 
 using namespace std;
 
+
+
 void adicionaVar(string nome, string tipo, bool temp = false);
+
 
 int tempVar = 0;
 int defVar = 0;
@@ -19,6 +22,7 @@ int defVar = 0;
 struct atributos {
 	string label;
 	string traducao;
+	//int linha;
 };
 
 struct tabela{
@@ -29,6 +33,7 @@ struct tabela{
 
 map<string, tabela> tabela_simbolos;
 
+extern int numLinha;
 int yylex(void);
 void yyerror(string);
 %}
@@ -124,7 +129,7 @@ DECLAR_VAR:
 				result = "float(" + $4.label + ")";
 			}
 			else{
-				cout << "Erro: Tipos incompatíveis para atribuição.\n";
+				cout << "Erro: Tipos incompatíveis para atribuição na linha " << numLinha << ".\n";
 				exit(1);
 			}
 		}
@@ -503,7 +508,7 @@ int main(int argc, char* argv[]) {
 }
 
 void yyerror(string MSG) {
-	cout << "Erro sintático: " << MSG << endl;
+	cout << "Erro sintático: " << MSG << "na linha: " << numLinha << endl;
 	exit(1);
 }
 

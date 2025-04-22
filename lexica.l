@@ -1,6 +1,7 @@
 %{
 #include <string>
 #include "y.tab.h"
+int numLinha = 1;
 
 using namespace std;
 
@@ -80,10 +81,11 @@ ID {LETRA}({LETRA}|{DIGITO})*
 "}"         { return '}'; }
 ";"         { return ';'; }
 
-[ \t\n]+    { /* ignora espaços */ }
+[ \t\n]+    { /* ignora espaços */ numLinha++;}
 
 .           {
-	printf("Caractere inválido: %s\n", yytext);
+	//printf("Caractere inválido: %s\n", yytext);
+	printf("Erro léxico: Caractere inválido '%s' na linha %d\n", yytext, numLinha);
 	return 0;
 }
 

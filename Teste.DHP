@@ -1,5 +1,5 @@
 int main() {
-    float a;
-    int b;
-    a = float(b);
+    int a = 1;
+    float b = 2.0;
+    int c = a + b;
 }
