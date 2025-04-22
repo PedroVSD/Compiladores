@@ -1,7 +1,7 @@
 int main() {
-    int x = 1;
-    int y = 0;
-    int w = 2 * (x + y);
+    bool a = true;
+    bool b = !a;
+    bool c = 1 < 2;
 }
 
 

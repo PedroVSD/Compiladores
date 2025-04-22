@@ -63,6 +63,16 @@ ID {LETRA}({LETRA}|{DIGITO})*
 
 "="         { return '='; }
 [+\-*/]     { return *yytext; }
+"=="        { return TK_IGUAL; }
+"!="        { return TK_DIFERENTE; }
+"<"         { return '<'; }
+"<="        { return TK_MENOR_IGUAL; }
+">"         { return '>'; }
+">="        { return TK_MAIOR_IGUAL; }
+
+"&&"       { return TK_AND; }
+"||"        { return TK_OR; }
+"!"        	{ return '!'; }
 
 "("         { return '('; }
 ")"         { return ')'; }
