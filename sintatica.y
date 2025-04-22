@@ -42,9 +42,14 @@ void yyerror(string);
 
 %start S
 
+%left TK_OR
+%left TK_AND
+%nonassoc TK_IGUAL TK_DIFERENTE
+%left '<' '>' TK_MAIOR_IGUAL TK_MENOR_IGUAL
 %left '+' '-'
 %left '*' '/'
-%right UMINUS
+%right UMINUS '!'
+%nonassoc '(' ')'
 
 %%
 
@@ -104,7 +109,7 @@ DECLAR_VAR:
         adicionaVar($2.label, $1.label);
         $$.traducao = "";
       }
-    | TIPO TK_ID '=' EXPR_SOMA {
+    | TIPO TK_ID '=' EXPR {
         adicionaVar($2.label, $1.label);
 
 		string tipo1 = $1.label;
@@ -132,12 +137,6 @@ DECLAR_VAR:
         ss << "\t" << tabela_simbolos[$2.label].endereco_memoria << " = " << $4.label << ";\n";
         $$.traducao = ss.str();
       }
-	| TIPO TK_ID '=' EXPR_BOOL {
-		adicionaVar($2.label, $1.label);
-		stringstream ss;
-		ss << "\t" << tabela_simbolos[$2.label].endereco_memoria << " = " << $4.label << ";\n";
-		$$.traducao = $4.traducao + ss.str();
-	  }
 ;
 
 ATRIB: TK_ID '=' EXPR {
@@ -175,15 +174,12 @@ ATRIB: TK_ID '=' EXPR {
 ;
 
 EXPR:
-	EXPR_SOMA {
-		$$.traducao = $1.traducao;
-	}
-	| EXPR_BOOL {
+	| EXPR_LOG %prec TK_OR {
 		$$.traducao = $1.traducao;
 	}
 ;
-EXPR_SOMA:
-	EXPR_SOMA '+' EXPR_MULT {
+EXPR_ARIT:
+	EXPR_ARIT '+' EXPR_TERM %prec '+' {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
 
@@ -199,23 +195,24 @@ EXPR_SOMA:
 				adicionaVar(temp2, tipo_result, true);
 				ss << "\t" << temp << " = float(" << tabela_simbolos[$1.label].endereco_memoria << ");\n";
 				ss << "\t" << temp2 << " = " << temp << " + " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
+				$$.label = temp2;
 			}
 			else{
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
 				ss << "\t" << temp << " = float(" << tabela_simbolos[$3.label].endereco_memoria << ");\n";
 				ss << "\t" << temp2 << " = " << temp << " + " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
+				$$.label = temp2;
 			}
 		}
 		else{
 			ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " + " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
+			$$.label = temp;
 		}
-		$$.label = temp;
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
-		cout << "Traducao EXPR_SOMA: " << $$.traducao << endl;
 
 	}
-	| EXPR_SOMA '-' EXPR_MULT {
+	| EXPR_ARIT '-' EXPR_TERM %prec '-' {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
 
@@ -231,29 +228,30 @@ EXPR_SOMA:
 				adicionaVar(temp2, tipo_result, true);
 				ss << "\t" << temp << " = float(" << tabela_simbolos[$1.label].endereco_memoria << ");\n";
 				ss << "\t" << temp2 << " = " << temp << " - " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
+				$$.label = temp2;
 			}
 			else{
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
 				ss << "\t" << temp << " = float(" << tabela_simbolos[$3.label].endereco_memoria << ");\n";
 				ss << "\t" << temp2 << " = " << temp << " - " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
+				$$.label = temp2;
 			}
 		}
 		else{
 			ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " - " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
+			$$.label = temp;
 		}
-		$$.label = temp;
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 
 	}
-
-	| EXPR_MULT {
-		$$.label = $1.label;
+	| EXPR_TERM {
+		$$. label = $1.label;
 		$$.traducao = $1.traducao;
 	}
 ;
-EXPR_MULT:
-	EXPR_MULT '*' EXPR_ATOM {
+EXPR_TERM:
+		EXPR_TERM '*' EXPR_ATOM %prec '*' {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
 
@@ -269,23 +267,25 @@ EXPR_MULT:
 				adicionaVar(temp2, tipo_result, true);
 				ss << "\t" << temp << " = float(" << tabela_simbolos[$1.label].endereco_memoria << ");\n";
 				ss << "\t" << temp2 << " = " << temp << " * " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
+				$$.label = temp2;
 			}
 			else{
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
 				ss << "\t" << temp << " = float(" << tabela_simbolos[$3.label].endereco_memoria << ");\n";
 				ss << "\t" << temp2 << " = " << temp << " * " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
+				$$.label = temp2;
 			}
 		}
 		else{
 			ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " * " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
+			$$.label = temp;
 		}
-		$$.label = temp;
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 		cout << "Traducao EXPR_MULT: " << $$.traducao << endl;
 
 	}
-	| EXPR_MULT '/' EXPR_ATOM {
+	| EXPR_TERM '/' EXPR_ATOM %prec '/' {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
 
@@ -301,33 +301,31 @@ EXPR_MULT:
 				adicionaVar(temp2, tipo_result, true);
 				ss << "\t" << temp << " = float(" << tabela_simbolos[$1.label].endereco_memoria << ");\n";
 				ss << "\t" << temp2 << " = " << temp << " / " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
+				$$.label = temp2;
 			}
 			else{
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
 				ss << "\t" << temp << " = float(" << tabela_simbolos[$3.label].endereco_memoria << ");\n";
 				ss << "\t" << temp2 << " = " << temp << " / " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
+				$$.label = temp2;
 			}
 		}
 		else{
 			ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " / " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
+			$$.label = temp;
 		}
-		$$.label = temp;
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
 	| EXPR_ATOM {
-		$$. label = $1.label;
-		$$.traducao = $1.traducao;
-	}
-;
-EXPR_BOOL:
-	EXPR_LOG {
 		$$.label = $1.label;
 		$$.traducao = $1.traducao;
 	}
+
 ;
+
 EXPR_LOG:
-	EXPR_LOG TK_AND EXPR_IGUAL {
+	EXPR_LOG TK_AND EXPR_LOG %prec TK_AND {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
 		ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " && " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
@@ -335,7 +333,7 @@ EXPR_LOG:
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 		adicionaVar(temp, "bool", true);
 	}
-	| EXPR_LOG TK_OR EXPR_IGUAL {
+	| EXPR_LOG TK_OR EXPR_LOG %prec TK_OR {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
 		ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " || " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
@@ -343,13 +341,13 @@ EXPR_LOG:
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 		adicionaVar(temp, "bool", true);
 	}
-	| EXPR_IGUAL {
+	| EXPR_REL {
 		$$.label = $1.label;
 		$$.traducao = $1.traducao;
 	}
 ;
-EXPR_IGUAL:
-	EXPR_IGUAL TK_IGUAL EXPR_COMP {
+EXPR_REL:
+	EXPR_REL TK_IGUAL EXPR_REL %prec TK_IGUAL {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
 		ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " == " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
@@ -357,7 +355,7 @@ EXPR_IGUAL:
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 		adicionaVar(temp, "bool", true);
 	}
-	| EXPR_IGUAL TK_DIFERENTE EXPR_COMP {
+	| EXPR_REL TK_DIFERENTE EXPR_REL %prec TK_DIFERENTE {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
 		ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " != " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
@@ -365,13 +363,7 @@ EXPR_IGUAL:
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 		adicionaVar(temp, "bool", true);
 	}
-	| EXPR_COMP {
-		$$.label = $1.label;
-		$$.traducao = $1.traducao;
-	}
-;
-EXPR_COMP:
-	EXPR_COMP '>' EXPR_NOT {
+	| EXPR_REL '>' EXPR_REL %prec '>' {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
 		ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " > " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
@@ -379,7 +371,7 @@ EXPR_COMP:
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 		adicionaVar(temp, "bool", true);
 	}
-	| EXPR_COMP '<' EXPR_NOT {
+	| EXPR_REL '<' EXPR_REL %prec '<' {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
 		ss << "\t" << temp << " = " <<tabela_simbolos[$1.label].endereco_memoria << " < " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
@@ -387,7 +379,7 @@ EXPR_COMP:
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 		adicionaVar(temp, "bool", true);
 	}
-	| EXPR_COMP TK_MAIOR_IGUAL EXPR_NOT {
+	| EXPR_REL TK_MAIOR_IGUAL EXPR_REL %prec TK_MAIOR_IGUAL {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
 		ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " >= " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
@@ -395,7 +387,7 @@ EXPR_COMP:
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 		adicionaVar(temp, "bool", true);
 	}
-	| EXPR_COMP TK_MENOR_IGUAL EXPR_NOT {
+	| EXPR_REL TK_MENOR_IGUAL EXPR_REL %prec TK_MENOR_IGUAL {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
 		ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " <= " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
@@ -409,7 +401,7 @@ EXPR_COMP:
 	}
 ;
 EXPR_NOT:
-	'!' EXPR_NOT {
+	'!' EXPR_NOT %prec '!' {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
 		ss << "\t" << temp << " = !" << tabela_simbolos[$2.label].endereco_memoria << ";\n";
@@ -417,17 +409,17 @@ EXPR_NOT:
 		$$.traducao = $2.traducao + ss.str();
 		adicionaVar(temp, "bool", true);
 	}
-	| EXPR_SOMA {
+	| EXPR_ARIT {
 		$$.label = $1.label;
 		$$.traducao = $1.traducao;
 	}
 ;
 EXPR_ATOM:
-	'(' EXPR ')' {
+	'(' EXPR ')'  %prec '(' {
 		$$.label = $2.label;
 		$$.traducao = $2.traducao;
 	}
-	| '-' EXPR %prec UMINUS {
+	| '-' EXPR_ATOM %prec UMINUS {
 	string temp = "t" + to_string(tempVar);
 	stringstream ss;
 	ss << "\t" << temp << " = -" << $2.label << ";\n";
