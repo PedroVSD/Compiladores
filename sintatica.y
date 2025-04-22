@@ -153,13 +153,13 @@ ATRIB: TK_ID '=' EXPR {
 		if(tipo1 == "int" && tipo2 == "float"){
 			string temp = "t" + to_string(tempVar);
 			adicionaVar(temp, tipo1, true);
-			ss << "\t" << temp << " = int(" << tabela_simbolos[$3.label].endereco_memoria << ");\n";
+			ss << "\t" << temp << " = (int)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
 			$$.label = temp;
 		}
 		else if(tipo1 == "float" && tipo2 == "int"){
 			string temp = "t" + to_string(tempVar);
 			adicionaVar(temp, tipo1, true);
-			ss << "\t" << temp << " = float(" << tabela_simbolos[$3.label].endereco_memoria << ");\n";
+			ss << "\t" << temp << " = (float)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
 			$$.label = temp;
 		}
 		else{
@@ -194,14 +194,14 @@ EXPR_ARIT:
 			if(tipo1 == "int" && tipo2 == "float"){
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = float(" << tabela_simbolos[$1.label].endereco_memoria << ");\n";
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[$1.label].endereco_memoria << ";\n";
 				ss << "\t" << temp2 << " = " << temp << " + " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
 				$$.label = temp2;
 			}
 			else{
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = float(" << tabela_simbolos[$3.label].endereco_memoria << ");\n";
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
 				ss << "\t" << temp2 << " = " << temp << " + " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
 				$$.label = temp2;
 			}
@@ -227,14 +227,14 @@ EXPR_ARIT:
 			if(tipo1 == "int" && tipo2 == "float"){
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = float(" << tabela_simbolos[$1.label].endereco_memoria << ");\n";
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[$1.label].endereco_memoria << ";\n";
 				ss << "\t" << temp2 << " = " << temp << " - " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
 				$$.label = temp2;
 			}
 			else{
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = float(" << tabela_simbolos[$3.label].endereco_memoria << ");\n";
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
 				ss << "\t" << temp2 << " = " << temp << " - " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
 				$$.label = temp2;
 			}
@@ -266,14 +266,14 @@ EXPR_TERM:
 			if(tipo1 == "int" && tipo2 == "float"){
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = float(" << tabela_simbolos[$1.label].endereco_memoria << ");\n";
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[$1.label].endereco_memoria << ";\n";
 				ss << "\t" << temp2 << " = " << temp << " * " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
 				$$.label = temp2;
 			}
 			else{
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = float(" << tabela_simbolos[$3.label].endereco_memoria << ");\n";
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
 				ss << "\t" << temp2 << " = " << temp << " * " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
 				$$.label = temp2;
 			}
@@ -300,14 +300,14 @@ EXPR_TERM:
 			if(tipo1 == "int" && tipo2 == "float"){
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = float(" << tabela_simbolos[$1.label].endereco_memoria << ");\n";
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[$1.label].endereco_memoria << ";\n";
 				ss << "\t" << temp2 << " = " << temp << " / " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
 				$$.label = temp2;
 			}
 			else{
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = float(" << tabela_simbolos[$3.label].endereco_memoria << ");\n";
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
 				ss << "\t" << temp2 << " = " << temp << " / " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
 				$$.label = temp2;
 			}
@@ -477,7 +477,7 @@ COVERT_TYPE:
 	TK_TIPO_INT '(' EXPR ')' {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		ss << "\t" << temp << " = int(" << $3.label << ");\n";
+		ss << "\t" << temp << " = (int)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
 		$$.label = temp;
 		$$.traducao = $3.traducao + ss.str();
 		adicionaVar(temp, "int", true);
@@ -485,7 +485,7 @@ COVERT_TYPE:
 	| TK_TIPO_FLOAT '(' EXPR ')' {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		ss << "\t" << temp << " = float(" << $3.label << ");\n";
+		ss << "\t" << temp << " = (float)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
 		$$.label = temp;
 		$$.traducao = $3.traducao + ss.str();
 		adicionaVar(temp, "float", true);

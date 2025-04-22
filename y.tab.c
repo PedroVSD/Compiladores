@@ -1423,13 +1423,13 @@ yyreduce:
 		if(tipo1 == "int" && tipo2 == "float"){
 			string temp = "t" + to_string(tempVar);
 			adicionaVar(temp, tipo1, true);
-			ss << "\t" << temp << " = int(" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ");\n";
+			ss << "\t" << temp << " = (int)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
 			yyval.label = temp;
 		}
 		else if(tipo1 == "float" && tipo2 == "int"){
 			string temp = "t" + to_string(tempVar);
 			adicionaVar(temp, tipo1, true);
-			ss << "\t" << temp << " = float(" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ");\n";
+			ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
 			yyval.label = temp;
 		}
 		else{
@@ -1468,14 +1468,14 @@ yyreduce:
 			if(tipo1 == "int" && tipo2 == "float"){
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = float(" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ");\n";
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
 				ss << "\t" << temp2 << " = " << temp << " + " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
 				yyval.label = temp2;
 			}
 			else{
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = float(" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ");\n";
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
 				ss << "\t" << temp2 << " = " << temp << " + " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
 				yyval.label = temp2;
 			}
@@ -1506,14 +1506,14 @@ yyreduce:
 			if(tipo1 == "int" && tipo2 == "float"){
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = float(" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ");\n";
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
 				ss << "\t" << temp2 << " = " << temp << " - " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
 				yyval.label = temp2;
 			}
 			else{
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = float(" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ");\n";
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
 				ss << "\t" << temp2 << " = " << temp << " - " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
 				yyval.label = temp2;
 			}
@@ -1553,14 +1553,14 @@ yyreduce:
 			if(tipo1 == "int" && tipo2 == "float"){
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = float(" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ");\n";
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
 				ss << "\t" << temp2 << " = " << temp << " * " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
 				yyval.label = temp2;
 			}
 			else{
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = float(" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ");\n";
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
 				ss << "\t" << temp2 << " = " << temp << " * " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
 				yyval.label = temp2;
 			}
@@ -1592,14 +1592,14 @@ yyreduce:
 			if(tipo1 == "int" && tipo2 == "float"){
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = float(" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ");\n";
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
 				ss << "\t" << temp2 << " = " << temp << " / " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
 				yyval.label = temp2;
 			}
 			else{
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = float(" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ");\n";
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
 				ss << "\t" << temp2 << " = " << temp << " / " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
 				yyval.label = temp2;
 			}
@@ -1862,7 +1862,7 @@ yyreduce:
                                  {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		ss << "\t" << temp << " = int(" << yyvsp[-1].label << ");\n";
+		ss << "\t" << temp << " = (int)" << tabela_simbolos[yyvsp[-1].label].endereco_memoria << ";\n";
 		yyval.label = temp;
 		yyval.traducao = yyvsp[-1].traducao + ss.str();
 		adicionaVar(temp, "int", true);
@@ -1875,7 +1875,7 @@ yyreduce:
                                      {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		ss << "\t" << temp << " = float(" << yyvsp[-1].label << ");\n";
+		ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[-1].label].endereco_memoria << ";\n";
 		yyval.label = temp;
 		yyval.traducao = yyvsp[-1].traducao + ss.str();
 		adicionaVar(temp, "float", true);

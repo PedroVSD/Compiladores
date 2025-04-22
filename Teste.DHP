@@ -1,4 +1,5 @@
 int main() {
-    bool a;
+    float a;
     int b;
+    a = float(b);
 }
