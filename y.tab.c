@@ -1385,10 +1385,10 @@ yyreduce:
 		string result = yyvsp[0].label;
 		if (tipo1 != tipo2) {
 			if(tipo1 == "int" && tipo2 == "float"){
-				result = "int(" + yyvsp[0].label + ")";
+				result = "(int)" + yyvsp[0].label;
 			}
 			else if(tipo1 == "float" && tipo2 == "int"){
-				result = "float(" + yyvsp[0].label + ")";
+				result = "(float)" + yyvsp[0].label;
 			}
 			else{
 				cout << "Erro: Tipos incompatíveis para atribuição na linha " << numLinha << ".\n";
