@@ -81,8 +81,8 @@ ID {LETRA}({LETRA}|{DIGITO})*
 "}"         { return '}'; }
 ";"         { return ';'; }
 
-[ \t\n]+    { /* ignora espaços */ numLinha++;}
-
+[ \t]+    { /* ignora espaços */}
+\n 	   { numLinha++; }
 .           {
 	//printf("Caractere inválido: %s\n", yytext);
 	printf("Erro léxico: Caractere inválido '%s' na linha %d\n", yytext, numLinha);
