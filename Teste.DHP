@@ -1,6 +1,3 @@
 int main() {
-    int a = 1;
-    float b = 2.0;
-    int d;
-    int c = a + b;
+    bool a = (1 < 2);
 }
