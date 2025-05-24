@@ -82,7 +82,7 @@ using namespace std;
 
 
 void adicionaVar(string nome, string tipo, bool temp = false);
-
+stringstream veririficarTipo(string var1, string operador, string var2 = "");
 
 int tempVar = 0;
 int defVar = 0;
@@ -649,9 +649,9 @@ static const yytype_int16 yyrline[] =
 {
        0,    59,    59,    77,    83,    86,    92,    93,    94,    98,
      104,   105,   106,   107,   111,   115,   137,   145,   179,   180,
-     185,   218,   251,   257,   289,   321,   329,   337,   345,   351,
-     384,   418,   453,   488,   523,   558,   564,   572,   578,   582,
-     593,   606,   614,   618,   626,   636,   644
+     185,   193,   202,   208,   216,   224,   232,   240,   248,   254,
+     287,   321,   356,   391,   426,   461,   467,   475,   481,   485,
+     496,   509,   517,   521,   529,   539,   547
 };
 #endif
 
@@ -1457,173 +1457,76 @@ yyreduce:
   case 20: /* EXPR_ARIT: EXPR_ARIT '+' EXPR_TERM  */
 #line 185 "sintatica.y"
                                           {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-
-		// Inferência simplificada: se um dos lados for float, resultado é float
-		string tipo1 = tabela_simbolos[yyvsp[-2].label].tipo;
-		string tipo2 = tabela_simbolos[yyvsp[0].label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, tipo_result, true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " + " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-			else{
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " + " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << " + " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-			yyval.label = temp;
-		}
+		string var1 = yyvsp[-2].label;
+		string var2 = yyvsp[0].label;
+		ss = veririficarTipo(var1, "+", var2);
+		yyval.label = "t" + to_string(tempVar-1);
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
-
 	}
-#line 1493 "y.tab.c"
+#line 1468 "y.tab.c"
     break;
 
   case 21: /* EXPR_ARIT: EXPR_ARIT '-' EXPR_TERM  */
-#line 218 "sintatica.y"
+#line 193 "sintatica.y"
                                             {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-
-		// Inferência simplificada: se um dos lados for float, resultado é float
-		string tipo1 = tabela_simbolos[yyvsp[-2].label].tipo;
-		string tipo2 = tabela_simbolos[yyvsp[0].label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, tipo_result, true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " - " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-			else{
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " - " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << " - " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-			yyval.label = temp;
-		}
+		string var1 = yyvsp[-2].label;
+		string var2 = yyvsp[0].label;
+		ss = veririficarTipo(var1, "-", var2);
+		yyval.label = "t" + to_string(tempVar-1);
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 
 	}
-#line 1531 "y.tab.c"
+#line 1482 "y.tab.c"
     break;
 
   case 22: /* EXPR_ARIT: EXPR_TERM  */
-#line 251 "sintatica.y"
+#line 202 "sintatica.y"
                     {
 		yyval. label = yyvsp[0].label;
 		yyval.traducao = yyvsp[0].traducao;
 	}
-#line 1540 "y.tab.c"
+#line 1491 "y.tab.c"
     break;
 
   case 23: /* EXPR_TERM: EXPR_TERM '*' EXPR_ATOM  */
-#line 257 "sintatica.y"
+#line 208 "sintatica.y"
                                                   {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-
-		// Inferência simplificada: se um dos lados for float, resultado é float
-		string tipo1 = tabela_simbolos[yyvsp[-2].label].tipo;
-		string tipo2 = tabela_simbolos[yyvsp[0].label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, tipo_result, true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " * " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-			else{
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " * " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << " * " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-			yyval.label = temp;
-		}
+		string var1 = yyvsp[-2].label;
+		string var2 = yyvsp[0].label;
+		ss = veririficarTipo(var1, "*", var2);
+		yyval.label = "t" + to_string(tempVar-1);
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 	}
-#line 1577 "y.tab.c"
+#line 1504 "y.tab.c"
     break;
 
   case 24: /* EXPR_TERM: EXPR_TERM '/' EXPR_ATOM  */
-#line 289 "sintatica.y"
+#line 216 "sintatica.y"
                                             {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-
-		// Inferência simplificada: se um dos lados for float, resultado é float
-		string tipo1 = tabela_simbolos[yyvsp[-2].label].tipo;
-		string tipo2 = tabela_simbolos[yyvsp[0].label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, tipo_result, true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " / " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-			else{
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " / " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << " / " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-			yyval.label = temp;
-		}
+		string var1 = yyvsp[-2].label;
+		string var2 = yyvsp[0].label;
+		ss = veririficarTipo(var1, "/", var2);
+		yyval.label = "t" + to_string(tempVar-1);
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 	}
-#line 1614 "y.tab.c"
+#line 1517 "y.tab.c"
     break;
 
   case 25: /* EXPR_TERM: EXPR_ATOM  */
-#line 321 "sintatica.y"
+#line 224 "sintatica.y"
                     {
 		yyval.label = yyvsp[0].label;
 		yyval.traducao = yyvsp[0].traducao;
 	}
-#line 1623 "y.tab.c"
+#line 1526 "y.tab.c"
     break;
 
   case 26: /* EXPR_LOG: EXPR_LOG TK_AND EXPR_LOG  */
-#line 329 "sintatica.y"
+#line 232 "sintatica.y"
                                               {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -1632,11 +1535,11 @@ yyreduce:
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 		adicionaVar(temp, "bool", true);
 	}
-#line 1636 "y.tab.c"
+#line 1539 "y.tab.c"
     break;
 
   case 27: /* EXPR_LOG: EXPR_LOG TK_OR EXPR_LOG  */
-#line 337 "sintatica.y"
+#line 240 "sintatica.y"
                                               {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -1645,20 +1548,20 @@ yyreduce:
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 		adicionaVar(temp, "bool", true);
 	}
-#line 1649 "y.tab.c"
+#line 1552 "y.tab.c"
     break;
 
   case 28: /* EXPR_LOG: EXPR_REL  */
-#line 345 "sintatica.y"
+#line 248 "sintatica.y"
                    {
 		yyval.label = yyvsp[0].label;
 		yyval.traducao = yyvsp[0].traducao;
 	}
-#line 1658 "y.tab.c"
+#line 1561 "y.tab.c"
     break;
 
   case 29: /* EXPR_REL: EXPR_REL TK_IGUAL EXPR_REL  */
-#line 351 "sintatica.y"
+#line 254 "sintatica.y"
                                                   {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -1692,11 +1595,11 @@ yyreduce:
 		}
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 	}
-#line 1696 "y.tab.c"
+#line 1599 "y.tab.c"
     break;
 
   case 30: /* EXPR_REL: EXPR_REL TK_DIFERENTE EXPR_REL  */
-#line 384 "sintatica.y"
+#line 287 "sintatica.y"
                                                             {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -1731,11 +1634,11 @@ yyreduce:
 		}
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 	}
-#line 1735 "y.tab.c"
+#line 1638 "y.tab.c"
     break;
 
   case 31: /* EXPR_REL: EXPR_REL '>' EXPR_REL  */
-#line 418 "sintatica.y"
+#line 321 "sintatica.y"
                                           {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -1771,11 +1674,11 @@ yyreduce:
 
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 	}
-#line 1775 "y.tab.c"
+#line 1678 "y.tab.c"
     break;
 
   case 32: /* EXPR_REL: EXPR_REL '<' EXPR_REL  */
-#line 453 "sintatica.y"
+#line 356 "sintatica.y"
                                           {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -1811,11 +1714,11 @@ yyreduce:
 
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 	}
-#line 1815 "y.tab.c"
+#line 1718 "y.tab.c"
     break;
 
   case 33: /* EXPR_REL: EXPR_REL TK_MAIOR_IGUAL EXPR_REL  */
-#line 488 "sintatica.y"
+#line 391 "sintatica.y"
                                                                 {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -1851,11 +1754,11 @@ yyreduce:
 
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 	}
-#line 1855 "y.tab.c"
+#line 1758 "y.tab.c"
     break;
 
   case 34: /* EXPR_REL: EXPR_REL TK_MENOR_IGUAL EXPR_REL  */
-#line 523 "sintatica.y"
+#line 426 "sintatica.y"
                                                                 {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -1891,20 +1794,20 @@ yyreduce:
 
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 	}
-#line 1895 "y.tab.c"
+#line 1798 "y.tab.c"
     break;
 
   case 35: /* EXPR_REL: EXPR_NOT  */
-#line 558 "sintatica.y"
+#line 461 "sintatica.y"
                    {
 		yyval.label = yyvsp[0].label;
 		yyval.traducao = yyvsp[0].traducao;
 	}
-#line 1904 "y.tab.c"
+#line 1807 "y.tab.c"
     break;
 
   case 36: /* EXPR_NOT: '!' EXPR_NOT  */
-#line 564 "sintatica.y"
+#line 467 "sintatica.y"
                                {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -1913,29 +1816,29 @@ yyreduce:
 		yyval.traducao = yyvsp[0].traducao + ss.str();
 		adicionaVar(temp, "bool", true);
 	}
-#line 1917 "y.tab.c"
+#line 1820 "y.tab.c"
     break;
 
   case 37: /* EXPR_NOT: EXPR_ARIT  */
-#line 572 "sintatica.y"
+#line 475 "sintatica.y"
                     {
 		yyval.label = yyvsp[0].label;
 		yyval.traducao = yyvsp[0].traducao;
 	}
-#line 1926 "y.tab.c"
+#line 1829 "y.tab.c"
     break;
 
   case 38: /* EXPR_ATOM: '(' EXPR ')'  */
-#line 578 "sintatica.y"
+#line 481 "sintatica.y"
                                 {
 		yyval.label = yyvsp[-1].label;
 		yyval.traducao = yyvsp[-1].traducao;
 	}
-#line 1935 "y.tab.c"
+#line 1838 "y.tab.c"
     break;
 
   case 39: /* EXPR_ATOM: '-' EXPR_ATOM  */
-#line 582 "sintatica.y"
+#line 485 "sintatica.y"
                                      {
 	string temp = "t" + to_string(tempVar);
 	stringstream ss;
@@ -1947,11 +1850,11 @@ yyreduce:
 	string tipo = tabela_simbolos[yyvsp[0].label].tipo;
 	adicionaVar(temp, tipo, true);
 	}
-#line 1951 "y.tab.c"
+#line 1854 "y.tab.c"
     break;
 
   case 40: /* EXPR_ATOM: TK_NUM  */
-#line 593 "sintatica.y"
+#line 496 "sintatica.y"
                  {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -1965,11 +1868,11 @@ yyreduce:
 
 		adicionaVar(temp, tipo, true);
 	}
-#line 1969 "y.tab.c"
+#line 1872 "y.tab.c"
     break;
 
   case 41: /* EXPR_ATOM: TK_ID  */
-#line 606 "sintatica.y"
+#line 509 "sintatica.y"
                 {
 		if (tabela_simbolos.find(yyvsp[0].label) == tabela_simbolos.end()) {
 			cout << "Erro: Variável " << yyvsp[0].label << " não declarada.\n";
@@ -1978,20 +1881,20 @@ yyreduce:
 		yyval.label = yyvsp[0].label;
 		yyval.traducao = "";
 	}
-#line 1982 "y.tab.c"
+#line 1885 "y.tab.c"
     break;
 
   case 42: /* EXPR_ATOM: COVERT_TYPE  */
-#line 614 "sintatica.y"
+#line 517 "sintatica.y"
                       {
 		yyval.label = yyvsp[0].label;
 		yyval.traducao = yyvsp[0].traducao;
 	}
-#line 1991 "y.tab.c"
+#line 1894 "y.tab.c"
     break;
 
   case 43: /* EXPR_ATOM: TK_BOOL_TRUE  */
-#line 618 "sintatica.y"
+#line 521 "sintatica.y"
                        {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -2000,11 +1903,11 @@ yyreduce:
 		yyval.traducao = ss.str();
 		adicionaVar(temp, "bool", true);
 	}
-#line 2004 "y.tab.c"
+#line 1907 "y.tab.c"
     break;
 
   case 44: /* EXPR_ATOM: TK_BOOL_FALSE  */
-#line 626 "sintatica.y"
+#line 529 "sintatica.y"
                         {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -2013,11 +1916,11 @@ yyreduce:
 		yyval.traducao = ss.str();
 		adicionaVar(temp, "bool", true);
 	}
-#line 2017 "y.tab.c"
+#line 1920 "y.tab.c"
     break;
 
   case 45: /* COVERT_TYPE: TK_TIPO_INT '(' EXPR ')'  */
-#line 636 "sintatica.y"
+#line 539 "sintatica.y"
                                  {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -2026,11 +1929,11 @@ yyreduce:
 		yyval.traducao = yyvsp[-1].traducao + ss.str();
 		adicionaVar(temp, "int", true);
 	}
-#line 2030 "y.tab.c"
+#line 1933 "y.tab.c"
     break;
 
   case 46: /* COVERT_TYPE: TK_TIPO_FLOAT '(' EXPR ')'  */
-#line 644 "sintatica.y"
+#line 547 "sintatica.y"
                                      {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -2039,11 +1942,11 @@ yyreduce:
 		yyval.traducao = yyvsp[-1].traducao + ss.str();
 		adicionaVar(temp, "float", true);
 	}
-#line 2043 "y.tab.c"
+#line 1946 "y.tab.c"
     break;
 
 
-#line 2047 "y.tab.c"
+#line 1950 "y.tab.c"
 
       default: break;
     }
@@ -2236,7 +2139,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 653 "sintatica.y"
+#line 556 "sintatica.y"
 
 
 #include "lex.yy.c"
@@ -2268,3 +2171,40 @@ void adicionaVar(string nome, string tipo, bool temp) {
 	}
 }
 
+stringstream veririficarTipo(string var1, string operador, string var2) {
+	stringstream ss;
+	string tipo1 = tabela_simbolos[var1].tipo;
+	string tipo2 = tabela_simbolos[var2].tipo;
+	if(operador == "+" || operador == "-" || operador == "*" || operador == "/"){		
+		if(tipo1 != tipo2){
+			string result_tipo = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
+			string temp = "t" + to_string(tempVar);
+			adicionaVar(temp, result_tipo, true);
+			string temp2 = "t" + to_string(tempVar);
+			adicionaVar(temp2, result_tipo, true);
+
+			if(tipo1 == "int" && tipo2 == "float"){
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[var1].endereco_memoria << ";\n";
+				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << tabela_simbolos[var2].endereco_memoria << ";\n";
+			}
+			else if(tipo1 == "float" && tipo2 == "int"){
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[var2].endereco_memoria << ";\n";
+				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << tabela_simbolos[var1].endereco_memoria << ";\n";
+			}
+			else{
+				cout << "Erro: Tipos incompatíveis para operação " << operador << ".\n";
+				exit(1);
+			}
+		}
+		else{
+			string temp = "t" + to_string(tempVar);
+			adicionaVar(temp, tipo1, true);
+			ss << "\t" << temp << " = " << tabela_simbolos[var1].endereco_memoria << " " << operador << " " << tabela_simbolos[var2].endereco_memoria << ";\n";
+		}
+	}
+	else{
+		cout << "Erro: Operador " << operador << " não suportado para tipos " << tipo1 << " e " << tipo2 << ".\n";
+		exit(1);
+	}
+	return ss;
+}

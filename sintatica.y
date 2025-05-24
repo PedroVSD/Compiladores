@@ -12,7 +12,7 @@ using namespace std;
 
 
 void adicionaVar(string nome, string tipo, bool temp = false);
-
+stringstream veririficarTipo(string var1, string operador, string var2 = "");
 
 int tempVar = 0;
 int defVar = 0;
@@ -183,68 +183,19 @@ EXPR:
 ;
 EXPR_ARIT:
 	EXPR_ARIT '+' EXPR_TERM %prec '+' {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-
-		// Inferência simplificada: se um dos lados for float, resultado é float
-		string tipo1 = tabela_simbolos[$1.label].tipo;
-		string tipo2 = tabela_simbolos[$3.label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, tipo_result, true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " + " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-			else{
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " + " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " + " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-			$$.label = temp;
-		}
+		string var1 = $1.label;
+		string var2 = $3.label;
+		ss = veririficarTipo(var1, "+", var2);
+		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
-
 	}
 	| EXPR_ARIT '-' EXPR_TERM %prec '-' {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-
-		// Inferência simplificada: se um dos lados for float, resultado é float
-		string tipo1 = tabela_simbolos[$1.label].tipo;
-		string tipo2 = tabela_simbolos[$3.label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, tipo_result, true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " - " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-			else{
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " - " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " - " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-			$$.label = temp;
-		}
+		string var1 = $1.label;
+		string var2 = $3.label;
+		ss = veririficarTipo(var1, "-", var2);
+		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 
 	}
@@ -255,67 +206,19 @@ EXPR_ARIT:
 ;
 EXPR_TERM:
 		EXPR_TERM '*' EXPR_ATOM %prec '*' {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-
-		// Inferência simplificada: se um dos lados for float, resultado é float
-		string tipo1 = tabela_simbolos[$1.label].tipo;
-		string tipo2 = tabela_simbolos[$3.label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, tipo_result, true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " * " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-			else{
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " * " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " * " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-			$$.label = temp;
-		}
+		string var1 = $1.label;
+		string var2 = $3.label;
+		ss = veririficarTipo(var1, "*", var2);
+		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
 	| EXPR_TERM '/' EXPR_ATOM %prec '/' {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-
-		// Inferência simplificada: se um dos lados for float, resultado é float
-		string tipo1 = tabela_simbolos[$1.label].tipo;
-		string tipo2 = tabela_simbolos[$3.label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, tipo_result, true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " / " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-			else{
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, tipo_result, true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " / " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " / " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-			$$.label = temp;
-		}
+		string var1 = $1.label;
+		string var2 = $3.label;
+		ss = veririficarTipo(var1, "/", var2);
+		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
 	| EXPR_ATOM {
@@ -681,3 +584,40 @@ void adicionaVar(string nome, string tipo, bool temp) {
 	}
 }
 
+stringstream veririficarTipo(string var1, string operador, string var2) {
+	stringstream ss;
+	string tipo1 = tabela_simbolos[var1].tipo;
+	string tipo2 = tabela_simbolos[var2].tipo;
+	if(operador == "+" || operador == "-" || operador == "*" || operador == "/"){		
+		if(tipo1 != tipo2){
+			string result_tipo = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
+			string temp = "t" + to_string(tempVar);
+			adicionaVar(temp, result_tipo, true);
+			string temp2 = "t" + to_string(tempVar);
+			adicionaVar(temp2, result_tipo, true);
+
+			if(tipo1 == "int" && tipo2 == "float"){
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[var1].endereco_memoria << ";\n";
+				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << tabela_simbolos[var2].endereco_memoria << ";\n";
+			}
+			else if(tipo1 == "float" && tipo2 == "int"){
+				ss << "\t" << temp << " = (float)" << tabela_simbolos[var2].endereco_memoria << ";\n";
+				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << tabela_simbolos[var1].endereco_memoria << ";\n";
+			}
+			else{
+				cout << "Erro: Tipos incompatíveis para operação " << operador << ".\n";
+				exit(1);
+			}
+		}
+		else{
+			string temp = "t" + to_string(tempVar);
+			adicionaVar(temp, tipo1, true);
+			ss << "\t" << temp << " = " << tabela_simbolos[var1].endereco_memoria << " " << operador << " " << tabela_simbolos[var2].endereco_memoria << ";\n";
+		}
+	}
+	else{
+		cout << "Erro: Operador " << operador << " não suportado para tipos " << tipo1 << " e " << tipo2 << ".\n";
+		exit(1);
+	}
+	return ss;
+}
