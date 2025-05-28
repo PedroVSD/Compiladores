@@ -16,6 +16,7 @@ stringstream veririficarTipo(string var1, string operador, string var2 = "");
 
 int tempVar = 0;
 int defVar = 0;
+int defbloco = 0;
 
 struct atributos {
 	string label;
@@ -56,21 +57,40 @@ void yyerror(string);
 %%
 
 S:
-	  TK_TIPO_INT TK_MAIN '(' ')' BLOCO {
+	INICIO
+	{
 		cout << "/*Compilador DHP*/\n";
-		cout << "\n#include<string.h>\n#include<stdio.h>\n";
-		cout << "int main(void)\n{\n";
+		cout << "\n#include<string.h>\n#include<stdio.h>\n";		cout << $1.traducao;
+	}
+;
+INICIO:
+	COMANDOS MAIN
+	{
+		$$.traducao = $1.traducao + $2.traducao;
+	}
+	| COMANDOS
+	{
+		$$.traducao = $1.traducao;
+	}
+	;
+MAIN:
+	TK_MAIN '(' ')' BLOCO {
+
+		stringstream ss;
+		ss << "int main(void)\n{\n";
 
 		for (const auto& [nome, info] : tabela_simbolos) {
 			string tipo = (info.tipo == "bool") ? "int" : info.tipo;
 			if (!(info.temporaria)) {
-    			cout << "\t" << tipo  << " " << info.endereco_memoria << ";\t //Variavel: "<< nome << "\n";}
+    			ss << "\t" << tipo  << " " << info.endereco_memoria << ";\t //Variavel: "<< nome << "\n";}
 			else {
-				cout << "\t" << tipo << " " << info.endereco_memoria << ";\n";}
+				ss << "\t" << tipo << " " << info.endereco_memoria << ";\n";}
 		}
 
-		cout << "\n" << $5.traducao << "\n";
-		cout << "\treturn 0;\n}\n";
+		ss << "\n" << $4.traducao << "\n";
+		ss << "\treturn 0;\n}\n";
+
+		$$.traducao = ss.str();
 	  }
 ;
 
@@ -114,24 +134,8 @@ DECLAR_VAR:
       }
     | TIPO TK_ID '=' EXPR {
         adicionaVar($2.label, $1.label);
-
-		string tipo1 = $1.label;
-		string tipo2 = tabela_simbolos[$4.label].tipo;
-		string result = $4.label;
-		if (tipo1 != tipo2) {
-			if(tipo1 == "int" && tipo2 == "float"){
-				result = "(int)" + $4.label;
-			}
-			else if(tipo1 == "float" && tipo2 == "int"){
-				result = "(float)" + $4.label;
-			}
-			else{
-				cout << "Erro: Tipos incompatíveis para atribuição na linha " << numLinha << ".\n";
-				exit(1);
-			}
-		}
         stringstream ss;
-        ss << "\t" << tabela_simbolos[$2.label].endereco_memoria << " = " << result << ";\n";
+		ss = veririficarTipo($2.label, "=", $4.label);
         $$.traducao = $4.traducao + ss.str();
       }
     | TIPO TK_ID '=' TK_CHAR {
@@ -147,31 +151,9 @@ ATRIB: TK_ID '=' EXPR {
 		cout << "Erro: Variável " << $1.label << " não declarada.\n";
 		exit(1);
 	}
-	string tipo1 = tabela_simbolos[$1.label].tipo;
-	string tipo2 = tabela_simbolos[$3.label].tipo;
-	stringstream ss;
-
-	if (tipo1 != tipo2) {
-		if(tipo1 == "int" && tipo2 == "float"){
-			string temp = "t" + to_string(tempVar);
-			adicionaVar(temp, tipo1, true);
-			ss << "\t" << temp << " = (int)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-			$$.label = temp;
-		}
-		else if(tipo1 == "float" && tipo2 == "int"){
-			string temp = "t" + to_string(tempVar);
-			adicionaVar(temp, tipo1, true);
-			ss << "\t" << temp << " = (float)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-			$$.label = temp;
-		}
-		else{
-			cout << "Erro: Tipos incompatíveis para atribuição.\n";
-			exit(1);
-		}
-	}
-
-	ss << "\t" << tabela_simbolos[$1.label].endereco_memoria << " = " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-	$$.traducao = $3.traducao + ss.str();
+        stringstream ss;
+		ss = veririficarTipo($1.label, "=", $3.label);
+        $$.traducao = $3.traducao + ss.str();
 }
 
 ;
@@ -229,21 +211,17 @@ EXPR_TERM:
 ;
 
 EXPR_LOG:
-	EXPR_LOG TK_AND EXPR_LOG %prec TK_AND {
-		string temp = "t" + to_string(tempVar);
+	EXPR_LOG TK_AND EXPR_REL %prec TK_AND {
 		stringstream ss;
-		ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " && " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-		$$.label = temp;
+		ss = veririficarTipo($1.label, "&&", $3.label);
+		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
-		adicionaVar(temp, "bool", true);
 	}
-	| EXPR_LOG TK_OR EXPR_LOG %prec TK_OR {
-		string temp = "t" + to_string(tempVar);
+	| EXPR_LOG TK_OR EXPR_REL %prec TK_OR {
 		stringstream ss;
-		ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " || " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-		$$.label = temp;
+		ss = veririficarTipo($1.label, "||", $3.label);
+		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
-		adicionaVar(temp, "bool", true);
 	}
 	| EXPR_REL {
 		$$.label = $1.label;
@@ -252,210 +230,39 @@ EXPR_LOG:
 ;
 EXPR_REL:
 	EXPR_REL TK_IGUAL EXPR_REL %prec TK_IGUAL {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		string tipo1 = tabela_simbolos[$1.label].tipo;
-		string tipo2 = tabela_simbolos[$3.label].tipo;
-		adicionaVar(temp, "bool", true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " == " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-			else if(tipo1 == "float" && tipo2 == "int"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " == " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-			else{
-				cout << "Erro: Tipos incompatíveis para comparação.\n";
-				exit(1);
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " == " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-			$$.label = temp;
-		}
+		ss = veririficarTipo($1.label, "==", $3.label);
+		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
 	| EXPR_REL TK_DIFERENTE EXPR_REL %prec TK_DIFERENTE {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		string tipo1 = tabela_simbolos[$1.label].tipo;
-		string tipo2 = tabela_simbolos[$3.label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, "bool", true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " != " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-			else if(tipo1 == "float" && tipo2 == "int"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " != " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-			else{
-				cout << "Erro: Tipos incompatíveis para comparação.\n";
-				exit(1);
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " != " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-			$$.label = temp;
-		}
+		ss = veririficarTipo($1.label, "!=", $3.label);
+		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
 	| EXPR_REL '>' EXPR_REL %prec '>' {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		string tipo1 = tabela_simbolos[$1.label].tipo;
-		string tipo2 = tabela_simbolos[$3.label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, "bool", true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " > " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-			else if(tipo1 == "float" && tipo2 == "int"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " > " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-			else{
-				cout << "Erro: Tipos incompatíveis para comparação.\n";
-				exit(1);
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " > " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-			$$.label = temp;
-		}
-
+		ss = veririficarTipo($1.label, ">", $3.label);
+		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
 	| EXPR_REL '<' EXPR_REL %prec '<' {
-		string temp = "t" + to_string(tempVar);
-		stringstream ss;
-		string tipo1 = tabela_simbolos[$1.label].tipo;
-		string tipo2 = tabela_simbolos[$3.label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, "bool", true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " < " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-			else if(tipo1 == "float" && tipo2 == "int"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " < " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-			else{
-				cout << "Erro: Tipos incompatíveis para comparação.\n";
-				exit(1);
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " < " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-			$$.label = temp;
-		}
-
+		stringstream ss;	
+		ss = veririficarTipo($1.label, "<", $3.label);
+		$$.label = "t" + to_string(tempVar-1);		
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
 	| EXPR_REL TK_MAIOR_IGUAL EXPR_REL %prec TK_MAIOR_IGUAL {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		string tipo1 = tabela_simbolos[$1.label].tipo;
-		string tipo2 = tabela_simbolos[$3.label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, "bool", true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " >= " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-			else if(tipo1 == "float" && tipo2 == "int"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " >= " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-			else{
-				cout << "Erro: Tipos incompatíveis para comparação.\n";
-				exit(1);
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " >= " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-			$$.label = temp;
-		}
-
+		ss = veririficarTipo($1.label, ">=", $3.label);
+		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
 	| EXPR_REL TK_MENOR_IGUAL EXPR_REL %prec TK_MENOR_IGUAL {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		string tipo1 = tabela_simbolos[$1.label].tipo;
-		string tipo2 = tabela_simbolos[$3.label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, "bool", true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " <= " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-			else if(tipo1 == "float" && tipo2 == "int"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " <= " << tabela_simbolos[$1.label].endereco_memoria << ";\n";
-				$$.label = temp2;
-			}
-			else{
-				cout << "Erro: Tipos incompatíveis para comparação.\n";
-				exit(1);
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[$1.label].endereco_memoria << " <= " << tabela_simbolos[$3.label].endereco_memoria << ";\n";
-			$$.label = temp;
-		}
-
+		ss = veririficarTipo($1.label, "<=", $3.label);
+		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
 	| EXPR_NOT {
@@ -565,7 +372,7 @@ int main(int argc, char* argv[]) {
 }
 
 void yyerror(string MSG) {
-	cout << "Erro sintático: " << MSG << "na linha: " << numLinha << endl;
+	cout << "Erro sintático: " << MSG << " na linha: " << numLinha << endl;
 	exit(1);
 }
 
@@ -588,7 +395,28 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 	stringstream ss;
 	string tipo1 = tabela_simbolos[var1].tipo;
 	string tipo2 = tabela_simbolos[var2].tipo;
-	if(operador == "+" || operador == "-" || operador == "*" || operador == "/"){		
+	string endereco1 = tabela_simbolos[var1].endereco_memoria;
+	string endereco2 = tabela_simbolos[var2].endereco_memoria;
+	
+	if(operador == "="){
+		if(tipo1 != tipo2){
+			if(tipo1 == "int" && tipo2 == "float"){
+				ss << "\t" << endereco1 << " = (int)" << endereco2 << ";\n";
+			}
+			else if(tipo1 == "float" && tipo2 == "int"){
+				ss << "\t" << endereco1 << " = (float)" << endereco2 << ";\n";
+			}
+			else{
+				cout << "Erro: Tipos incompatíveis para atribuição da variavel: " << var1 << "\n" ;
+				exit(1);
+			}
+		}
+		else{
+			ss << "\t" << endereco1 << " = " << endereco2 << ";\n";
+		}
+		return ss;
+	}	
+	else if(operador == "+" || operador == "-" || operador == "*" || operador == "/"){		
 		if(tipo1 != tipo2){
 			string result_tipo = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
 			string temp = "t" + to_string(tempVar);
@@ -597,12 +425,12 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 			adicionaVar(temp2, result_tipo, true);
 
 			if(tipo1 == "int" && tipo2 == "float"){
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[var1].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << tabela_simbolos[var2].endereco_memoria << ";\n";
+				ss << "\t" << temp << " = (float)" << endereco1 << ";\n";
+				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << endereco2 << ";\n";
 			}
 			else if(tipo1 == "float" && tipo2 == "int"){
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[var2].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << tabela_simbolos[var1].endereco_memoria << ";\n";
+				ss << "\t" << temp << " = (float)" << endereco2 << ";\n";
+				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << endereco1 << ";\n";
 			}
 			else{
 				cout << "Erro: Tipos incompatíveis para operação " << operador << ".\n";
@@ -612,7 +440,80 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 		else{
 			string temp = "t" + to_string(tempVar);
 			adicionaVar(temp, tipo1, true);
-			ss << "\t" << temp << " = " << tabela_simbolos[var1].endereco_memoria << " " << operador << " " << tabela_simbolos[var2].endereco_memoria << ";\n";
+			ss << "\t" << temp << " = " << endereco1 << " " << operador << " " << endereco2 << ";\n";
+		}
+	}
+	else if(operador == "||" || operador == "&&"){
+		if(tipo1 != "bool" || tipo2 != "bool"){
+			cout << "Erro: Operador lógico " << operador << " só pode ser usado com tipos booleanos.\n";
+			exit(1);
+		}
+		string temp = "t" + to_string(tempVar);
+		adicionaVar(temp, "bool", true);
+		ss << "\t" << temp << " = " << endereco1 << " " << operador << " " << endereco2 << ";\n";
+	}
+
+	else if(operador == "==" || operador == "!="){
+		if(tipo1 != tipo2){
+			if(tipo1 == "int" && tipo2 == "float"){
+				string temp = "t" + to_string(tempVar);
+				adicionaVar(temp, "bool", true);
+				string temp2 = "t" + to_string(tempVar);
+				adicionaVar(temp2, "bool", true);
+				ss << "\t" << temp << " = (float)" << endereco1 << ";\n";
+				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << endereco2 << ";\n";
+			}
+			else if(tipo1 == "float" && tipo2 == "int"){
+				string temp = "t" + to_string(tempVar);
+				adicionaVar(temp, "bool", true);
+				string temp2 = "t" + to_string(tempVar);
+				adicionaVar(temp2, "bool", true);
+				ss << "\t" << temp << " = (float)" << endereco2 << ";\n";
+				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << endereco1 << ";\n";
+			}
+			else{
+				cout << "Erro: Tipos incompatíveis para operação de comparação.\n";
+				exit(1);
+			}
+		}
+		else{
+			string temp = "t" + to_string(tempVar);
+			adicionaVar(temp, "bool", true);
+			ss << "\t" << temp << " = ("<< endereco1 <<" "<< operador <<" "<< endereco2<<");\n";
+		}
+	}
+
+	else if(operador == ">" || operador == "<" || operador == ">=" || operador == "<="){
+		if(tipo1 != tipo2){
+			if(tipo1 == "int" && tipo2 == "float"){
+				string temp = "t" + to_string(tempVar);
+				adicionaVar(temp, "bool", true);
+				string temp2 = "t" + to_string(tempVar);
+				adicionaVar(temp2, "bool", true);
+				ss << "\t" << temp << " = (float)" << endereco1 << ";\n";
+				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << endereco2 << ";\n";
+			}
+			else if(tipo1 == "float" && tipo2 == "int"){
+				string temp = "t" + to_string(tempVar);
+				adicionaVar(temp, "bool", true);
+				string temp2 = "t" + to_string(tempVar);
+				adicionaVar(temp2, "bool", true);
+				ss << "\t" << temp << " = (float)" << endereco2 << ";\n";
+				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << endereco1 << ";\n";
+			}
+			else{
+				cout << "Erro: Tipos incompatíveis para operação de comparação.\n";
+				exit(1);
+			}
+		}
+		else if(tipo1 != "bool" && tipo2 != "bool"){
+			string temp = "t" + to_string(tempVar);
+			adicionaVar(temp, "bool", true);
+			ss << "\t" << temp << " = " << endereco1 << " " << operador << " " << endereco2 << ";\n";
+		}
+		else{
+			cout << "Erro: Operador de comparação " << operador << " só pode ser usado com tipos numéricos.\n";
+			exit(1);
 		}
 	}
 	else{

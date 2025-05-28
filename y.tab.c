@@ -86,6 +86,7 @@ stringstream veririficarTipo(string var1, string operador, string var2 = "");
 
 int tempVar = 0;
 int defVar = 0;
+int defbloco = 0;
 
 struct atributos {
 	string label;
@@ -104,7 +105,7 @@ extern int numLinha;
 int yylex(void);
 void yyerror(string);
 
-#line 108 "y.tab.c"
+#line 109 "y.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -245,21 +246,23 @@ enum yysymbol_kind_t
   YYSYMBOL_32_ = 32,                       /* '='  */
   YYSYMBOL_YYACCEPT = 33,                  /* $accept  */
   YYSYMBOL_S = 34,                         /* S  */
-  YYSYMBOL_BLOCO = 35,                     /* BLOCO  */
-  YYSYMBOL_COMANDOS = 36,                  /* COMANDOS  */
-  YYSYMBOL_COMANDO = 37,                   /* COMANDO  */
-  YYSYMBOL_DECLARACAO = 38,                /* DECLARACAO  */
-  YYSYMBOL_TIPO = 39,                      /* TIPO  */
-  YYSYMBOL_DECLAR_VAR = 40,                /* DECLAR_VAR  */
-  YYSYMBOL_ATRIB = 41,                     /* ATRIB  */
-  YYSYMBOL_EXPR = 42,                      /* EXPR  */
-  YYSYMBOL_EXPR_ARIT = 43,                 /* EXPR_ARIT  */
-  YYSYMBOL_EXPR_TERM = 44,                 /* EXPR_TERM  */
-  YYSYMBOL_EXPR_LOG = 45,                  /* EXPR_LOG  */
-  YYSYMBOL_EXPR_REL = 46,                  /* EXPR_REL  */
-  YYSYMBOL_EXPR_NOT = 47,                  /* EXPR_NOT  */
-  YYSYMBOL_EXPR_ATOM = 48,                 /* EXPR_ATOM  */
-  YYSYMBOL_COVERT_TYPE = 49                /* COVERT_TYPE  */
+  YYSYMBOL_INICIO = 35,                    /* INICIO  */
+  YYSYMBOL_MAIN = 36,                      /* MAIN  */
+  YYSYMBOL_BLOCO = 37,                     /* BLOCO  */
+  YYSYMBOL_COMANDOS = 38,                  /* COMANDOS  */
+  YYSYMBOL_COMANDO = 39,                   /* COMANDO  */
+  YYSYMBOL_DECLARACAO = 40,                /* DECLARACAO  */
+  YYSYMBOL_TIPO = 41,                      /* TIPO  */
+  YYSYMBOL_DECLAR_VAR = 42,                /* DECLAR_VAR  */
+  YYSYMBOL_ATRIB = 43,                     /* ATRIB  */
+  YYSYMBOL_EXPR = 44,                      /* EXPR  */
+  YYSYMBOL_EXPR_ARIT = 45,                 /* EXPR_ARIT  */
+  YYSYMBOL_EXPR_TERM = 46,                 /* EXPR_TERM  */
+  YYSYMBOL_EXPR_LOG = 47,                  /* EXPR_LOG  */
+  YYSYMBOL_EXPR_REL = 48,                  /* EXPR_REL  */
+  YYSYMBOL_EXPR_NOT = 49,                  /* EXPR_NOT  */
+  YYSYMBOL_EXPR_ATOM = 50,                 /* EXPR_ATOM  */
+  YYSYMBOL_COVERT_TYPE = 51                /* COVERT_TYPE  */
 };
 typedef enum yysymbol_kind_t yysymbol_kind_t;
 
@@ -585,18 +588,18 @@ union yyalloc
 #endif /* !YYCOPY_NEEDED */
 
 /* YYFINAL -- State number of the termination state.  */
-#define YYFINAL  4
+#define YYFINAL  37
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   109
+#define YYLAST   106
 
 /* YYNTOKENS -- Number of terminals.  */
 #define YYNTOKENS  33
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  17
+#define YYNNTS  19
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  46
+#define YYNRULES  49
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  82
+#define YYNSTATES  84
 
 /* YYMAXUTOK -- Last valid token kind.  */
 #define YYMAXUTOK   274
@@ -647,11 +650,11 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,    59,    59,    77,    83,    86,    92,    93,    94,    98,
-     104,   105,   106,   107,   111,   115,   137,   145,   179,   180,
-     185,   193,   202,   208,   216,   224,   232,   240,   248,   254,
-     287,   321,   356,   391,   426,   461,   467,   475,   481,   485,
-     496,   509,   517,   521,   529,   539,   547
+       0,    60,    60,    67,    71,    77,    97,   103,   106,   112,
+     113,   114,   118,   124,   125,   126,   127,   131,   135,   141,
+     149,   161,   162,   167,   175,   184,   190,   198,   206,   214,
+     220,   226,   232,   238,   244,   250,   256,   262,   268,   274,
+     282,   288,   292,   303,   316,   324,   328,   336,   346,   354
 };
 #endif
 
@@ -672,10 +675,10 @@ static const char *const yytname[] =
   "TK_TIPO_BOOL", "TK_IGUAL", "TK_DIFERENTE", "TK_MAIOR_IGUAL",
   "TK_MENOR_IGUAL", "TK_AND", "TK_OR", "TK_CHAR", "TK_BOOL_TRUE",
   "TK_BOOL_FALSE", "'<'", "'>'", "'+'", "'-'", "'*'", "'/'", "UMINUS",
-  "'!'", "'('", "')'", "'{'", "'}'", "';'", "'='", "$accept", "S", "BLOCO",
-  "COMANDOS", "COMANDO", "DECLARACAO", "TIPO", "DECLAR_VAR", "ATRIB",
-  "EXPR", "EXPR_ARIT", "EXPR_TERM", "EXPR_LOG", "EXPR_REL", "EXPR_NOT",
-  "EXPR_ATOM", "COVERT_TYPE", YY_NULLPTR
+  "'!'", "'('", "')'", "'{'", "'}'", "';'", "'='", "$accept", "S",
+  "INICIO", "MAIN", "BLOCO", "COMANDOS", "COMANDO", "DECLARACAO", "TIPO",
+  "DECLAR_VAR", "ATRIB", "EXPR", "EXPR_ARIT", "EXPR_TERM", "EXPR_LOG",
+  "EXPR_REL", "EXPR_NOT", "EXPR_ATOM", "COVERT_TYPE", YY_NULLPTR
 };
 
 static const char *
@@ -685,12 +688,12 @@ yysymbol_name (yysymbol_kind_t yysymbol)
 }
 #endif
 
-#define YYPACT_NINF (-30)
+#define YYPACT_NINF (-22)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
 
-#define YYTABLE_NINF (-19)
+#define YYTABLE_NINF (-22)
 
 #define yytable_value_is_error(Yyn) \
   ((Yyn) == YYTABLE_NINF)
@@ -699,15 +702,15 @@ yysymbol_name (yysymbol_kind_t yysymbol)
    STATE-NUM.  */
 static const yytype_int8 yypact[] =
 {
-       3,    15,    24,     2,   -30,     5,    12,     1,   -30,   -30,
-      -2,     4,     7,   -30,   -30,   -30,   -30,    65,    59,    59,
-      13,     1,    11,    40,   -30,    14,    16,   -10,   -21,    -1,
-      78,   -30,   -30,   -30,    59,    59,    59,   -30,     4,     7,
-     -30,   -30,    20,   -30,   -30,   -30,    17,   -30,   -30,    65,
-      65,    65,    65,    59,    59,    59,    59,    59,    59,    59,
-      59,   -30,    25,    26,   -30,    34,   -21,   -21,   -30,   -30,
-     -30,    41,    83,    83,   -30,   -30,   -30,   -30,   -30,   -30,
-     -30,   -30
+       4,   -22,   -21,    -2,     5,   -22,   -22,   -22,   -22,    65,
+      40,    40,    34,   -22,    29,     4,     8,    38,   -22,    18,
+      19,   -18,     0,    -9,    66,   -22,   -22,   -22,    40,    40,
+      40,   -22,    -2,     5,   -22,   -22,    23,   -22,    26,   -22,
+     -22,   -22,    22,   -22,   -22,    65,    65,    65,    65,    40,
+      40,    40,    40,    40,    40,    40,    40,   -22,    27,    28,
+     -22,    31,    11,     0,     0,   -22,   -22,    66,    66,    78,
+      78,   -22,   -22,   -22,   -22,   -22,   -22,    32,   -22,   -22,
+       4,   -22,    30,   -22
 };
 
 /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -715,29 +718,29 @@ static const yytype_int8 yypact[] =
    means the default is an error.  */
 static const yytype_int8 yydefact[] =
 {
-       0,     0,     0,     0,     1,     0,     0,     5,     2,    40,
-      41,    10,    11,    12,    13,    43,    44,     0,     0,    18,
-       0,     5,     0,     0,     9,     0,     0,    37,    22,    19,
-      28,    35,    25,    42,    18,    18,    18,    41,     0,     0,
-      39,    36,     0,     3,     4,     6,    14,     7,     8,     0,
-       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,    17,     0,     0,    38,    18,    20,    21,    23,    24,
-      26,    27,    29,    30,    33,    34,    32,    31,    45,    46,
-      16,    15
+       8,    43,    44,    13,    14,    15,    16,    46,    47,     0,
+       0,    21,     0,     2,     4,     8,     0,     0,    12,     0,
+       0,    40,    25,    22,    31,    38,    28,    45,    21,    21,
+      21,    44,     0,     0,    42,    39,     0,     1,     0,     3,
+       7,     9,    17,    10,    11,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,    20,     0,     0,
+      41,     0,    21,    23,    24,    26,    27,    29,    30,    32,
+      33,    36,    37,    35,    34,    48,    49,     0,    19,    18,
+       8,     5,     0,     6
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-     -30,   -30,   -30,    36,   -30,   -30,   -30,   -30,   -30,   -19,
-     -30,   -29,   -28,    49,    48,   -16,   -30
+     -22,   -22,   -22,   -22,   -22,   -15,   -22,   -22,   -22,   -22,
+     -22,   -10,   -22,     2,   -22,    50,    53,    -7,   -22
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-       0,     2,     8,    20,    21,    22,    23,    24,    25,    26,
-      27,    28,    29,    30,    31,    32,    33
+       0,    12,    13,    39,    81,    14,    15,    16,    17,    18,
+      19,    20,    21,    22,    23,    24,    25,    26,    27
 };
 
 /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -745,67 +748,67 @@ static const yytype_int8 yydefgoto[] =
    number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int8 yytable[] =
 {
-      42,    40,    51,    52,     9,    10,    11,    12,     1,    13,
-      14,    49,    50,    53,    54,    61,    62,    63,    15,    16,
-      66,    67,     3,    17,     4,    70,    71,    18,    19,     5,
-      34,    35,   -18,     6,    36,    68,    69,     9,    37,    38,
-      39,     7,    45,    43,    46,    47,    81,    48,    64,    65,
-      80,    15,    16,    78,    79,    53,    17,    44,     0,     0,
-      18,    19,     9,    37,    38,    39,    41,     0,     9,    37,
-      38,    39,     0,     0,     0,     0,    15,    16,     0,     0,
-       0,    17,    15,    16,     0,    18,    19,    17,    55,    56,
-      57,    58,    19,   -19,   -19,    57,    58,    59,    60,     0,
-       0,     0,    59,    60,    72,    73,    74,    75,    76,    77
+      40,    36,    34,    45,    46,    49,    50,     1,     2,     3,
+       4,    28,     5,     6,     1,    31,    32,    33,    57,    58,
+      59,     7,     8,    47,    48,    29,     9,    78,     7,     8,
+      10,    11,    30,     9,    37,   -21,    38,    10,    11,    41,
+      65,    66,    42,     1,    31,    32,    33,    63,    64,    43,
+      44,    60,    79,    61,    62,    75,    76,     7,     8,    77,
+      83,    80,     9,    35,     0,    82,    10,    11,     1,    31,
+      32,    33,     0,     0,     0,     0,    51,    52,    53,    54,
+       0,     0,     7,     8,     0,    55,    56,     9,   -22,   -22,
+      53,    54,    11,     0,     0,     0,     0,    55,    56,    67,
+      68,    69,    70,    71,    72,    73,    74
 };
 
 static const yytype_int8 yycheck[] =
 {
-      19,    17,    23,    24,     3,     4,     5,     6,     5,     8,
-       9,    21,    22,    14,    15,    34,    35,    36,    17,    18,
-      49,    50,     7,    22,     0,    53,    54,    26,    27,    27,
-      32,    27,    31,    28,    27,    51,    52,     3,     4,     5,
-       6,    29,    31,    30,     4,    31,    65,    31,    28,    32,
-      16,    17,    18,    28,    28,    14,    22,    21,    -1,    -1,
-      26,    27,     3,     4,     5,     6,    18,    -1,     3,     4,
-       5,     6,    -1,    -1,    -1,    -1,    17,    18,    -1,    -1,
-      -1,    22,    17,    18,    -1,    26,    27,    22,    10,    11,
-      12,    13,    27,    10,    11,    12,    13,    19,    20,    -1,
-      -1,    -1,    19,    20,    55,    56,    57,    58,    59,    60
+      15,    11,     9,    21,    22,    14,    15,     3,     4,     5,
+       6,    32,     8,     9,     3,     4,     5,     6,    28,    29,
+      30,    17,    18,    23,    24,    27,    22,    16,    17,    18,
+      26,    27,    27,    22,     0,    31,     7,    26,    27,    31,
+      47,    48,     4,     3,     4,     5,     6,    45,    46,    31,
+      31,    28,    62,    27,    32,    28,    28,    17,    18,    28,
+      30,    29,    22,    10,    -1,    80,    26,    27,     3,     4,
+       5,     6,    -1,    -1,    -1,    -1,    10,    11,    12,    13,
+      -1,    -1,    17,    18,    -1,    19,    20,    22,    10,    11,
+      12,    13,    27,    -1,    -1,    -1,    -1,    19,    20,    49,
+      50,    51,    52,    53,    54,    55,    56
 };
 
 /* YYSTOS[STATE-NUM] -- The symbol kind of the accessing symbol of
    state STATE-NUM.  */
 static const yytype_int8 yystos[] =
 {
-       0,     5,    34,     7,     0,    27,    28,    29,    35,     3,
-       4,     5,     6,     8,     9,    17,    18,    22,    26,    27,
-      36,    37,    38,    39,    40,    41,    42,    43,    44,    45,
-      46,    47,    48,    49,    32,    27,    27,     4,     5,     6,
-      48,    47,    42,    30,    36,    31,     4,    31,    31,    21,
-      22,    23,    24,    14,    15,    10,    11,    12,    13,    19,
-      20,    42,    42,    42,    28,    32,    44,    44,    48,    48,
-      45,    45,    46,    46,    46,    46,    46,    46,    28,    28,
-      16,    42
+       0,     3,     4,     5,     6,     8,     9,    17,    18,    22,
+      26,    27,    34,    35,    38,    39,    40,    41,    42,    43,
+      44,    45,    46,    47,    48,    49,    50,    51,    32,    27,
+      27,     4,     5,     6,    50,    49,    44,     0,     7,    36,
+      38,    31,     4,    31,    31,    21,    22,    23,    24,    14,
+      15,    10,    11,    12,    13,    19,    20,    44,    44,    44,
+      28,    27,    32,    46,    46,    50,    50,    48,    48,    48,
+      48,    48,    48,    48,    48,    28,    28,    28,    16,    44,
+      29,    37,    38,    30
 };
 
 /* YYR1[RULE-NUM] -- Symbol kind of the left-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr1[] =
 {
-       0,    33,    34,    35,    36,    36,    37,    37,    37,    38,
-      39,    39,    39,    39,    40,    40,    40,    41,    42,    42,
-      43,    43,    43,    44,    44,    44,    45,    45,    45,    46,
-      46,    46,    46,    46,    46,    46,    47,    47,    48,    48,
-      48,    48,    48,    48,    48,    49,    49
+       0,    33,    34,    35,    35,    36,    37,    38,    38,    39,
+      39,    39,    40,    41,    41,    41,    41,    42,    42,    42,
+      43,    44,    44,    45,    45,    45,    46,    46,    46,    47,
+      47,    47,    48,    48,    48,    48,    48,    48,    48,    49,
+      49,    50,    50,    50,    50,    50,    50,    50,    51,    51
 };
 
 /* YYR2[RULE-NUM] -- Number of symbols on the right-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr2[] =
 {
-       0,     2,     5,     3,     2,     0,     2,     2,     2,     1,
-       1,     1,     1,     1,     2,     4,     4,     3,     0,     1,
-       3,     3,     1,     3,     3,     1,     3,     3,     1,     3,
-       3,     3,     3,     3,     3,     1,     2,     1,     3,     2,
-       1,     1,     1,     1,     1,     4,     4
+       0,     2,     1,     2,     1,     4,     3,     2,     0,     2,
+       2,     2,     1,     1,     1,     1,     1,     2,     4,     4,
+       3,     0,     1,     3,     3,     1,     3,     3,     1,     3,
+       3,     1,     3,     3,     3,     3,     3,     3,     1,     2,
+       1,     3,     2,     1,     1,     1,     1,     1,     4,     4
 };
 
 
@@ -1268,194 +1271,183 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-  case 2: /* S: TK_TIPO_INT TK_MAIN '(' ')' BLOCO  */
-#line 59 "sintatica.y"
-                                            {
+  case 2: /* S: INICIO  */
+#line 61 "sintatica.y"
+        {
 		cout << "/*Compilador DHP*/\n";
-		cout << "\n#include<string.h>\n#include<stdio.h>\n";
-		cout << "int main(void)\n{\n";
+		cout << "\n#include<string.h>\n#include<stdio.h>\n";		cout << yyvsp[0].traducao;
+	}
+#line 1281 "y.tab.c"
+    break;
+
+  case 3: /* INICIO: COMANDOS MAIN  */
+#line 68 "sintatica.y"
+        {
+		yyval.traducao = yyvsp[-1].traducao + yyvsp[0].traducao;
+	}
+#line 1289 "y.tab.c"
+    break;
+
+  case 4: /* INICIO: COMANDOS  */
+#line 72 "sintatica.y"
+        {
+		yyval.traducao = yyvsp[0].traducao;
+	}
+#line 1297 "y.tab.c"
+    break;
+
+  case 5: /* MAIN: TK_MAIN '(' ')' BLOCO  */
+#line 77 "sintatica.y"
+                              {
+
+		stringstream ss;
+		ss << "int main(void)\n{\n";
 
 		for (const auto& [nome, info] : tabela_simbolos) {
 			string tipo = (info.tipo == "bool") ? "int" : info.tipo;
 			if (!(info.temporaria)) {
-    			cout << "\t" << tipo  << " " << info.endereco_memoria << ";\t //Variavel: "<< nome << "\n";}
+    			ss << "\t" << tipo  << " " << info.endereco_memoria << ";\t //Variavel: "<< nome << "\n";}
 			else {
-				cout << "\t" << tipo << " " << info.endereco_memoria << ";\n";}
+				ss << "\t" << tipo << " " << info.endereco_memoria << ";\n";}
 		}
 
-		cout << "\n" << yyvsp[0].traducao << "\n";
-		cout << "\treturn 0;\n}\n";
+		ss << "\n" << yyvsp[0].traducao << "\n";
+		ss << "\treturn 0;\n}\n";
+
+		yyval.traducao = ss.str();
 	  }
-#line 1290 "y.tab.c"
-    break;
-
-  case 3: /* BLOCO: '{' COMANDOS '}'  */
-#line 77 "sintatica.y"
-                        {
-	yyval.traducao = yyvsp[-1].traducao;
-}
-#line 1298 "y.tab.c"
-    break;
-
-  case 4: /* COMANDOS: COMANDO COMANDOS  */
-#line 83 "sintatica.y"
-                         {
-		yyval.traducao = yyvsp[-1].traducao + yyvsp[0].traducao;
-	}
-#line 1306 "y.tab.c"
-    break;
-
-  case 5: /* COMANDOS: %empty  */
-#line 86 "sintatica.y"
-                      {
-		yyval.traducao = "";
-	}
-#line 1314 "y.tab.c"
-    break;
-
-  case 6: /* COMANDO: DECLARACAO ';'  */
-#line 92 "sintatica.y"
-                         { yyval.traducao = yyvsp[-1].traducao; }
 #line 1320 "y.tab.c"
     break;
 
-  case 7: /* COMANDO: ATRIB ';'  */
-#line 93 "sintatica.y"
-                         { yyval.traducao = yyvsp[-1].traducao; }
-#line 1326 "y.tab.c"
+  case 6: /* BLOCO: '{' COMANDOS '}'  */
+#line 97 "sintatica.y"
+                        {
+	yyval.traducao = yyvsp[-1].traducao;
+}
+#line 1328 "y.tab.c"
     break;
 
-  case 8: /* COMANDO: EXPR ';'  */
-#line 94 "sintatica.y"
-                         { yyval.traducao = yyvsp[-1].traducao; }
-#line 1332 "y.tab.c"
+  case 7: /* COMANDOS: COMANDO COMANDOS  */
+#line 103 "sintatica.y"
+                         {
+		yyval.traducao = yyvsp[-1].traducao + yyvsp[0].traducao;
+	}
+#line 1336 "y.tab.c"
     break;
 
-  case 9: /* DECLARACAO: DECLAR_VAR  */
-#line 98 "sintatica.y"
+  case 8: /* COMANDOS: %empty  */
+#line 106 "sintatica.y"
+                      {
+		yyval.traducao = "";
+	}
+#line 1344 "y.tab.c"
+    break;
+
+  case 9: /* COMANDO: DECLARACAO ';'  */
+#line 112 "sintatica.y"
+                         { yyval.traducao = yyvsp[-1].traducao; }
+#line 1350 "y.tab.c"
+    break;
+
+  case 10: /* COMANDO: ATRIB ';'  */
+#line 113 "sintatica.y"
+                         { yyval.traducao = yyvsp[-1].traducao; }
+#line 1356 "y.tab.c"
+    break;
+
+  case 11: /* COMANDO: EXPR ';'  */
+#line 114 "sintatica.y"
+                         { yyval.traducao = yyvsp[-1].traducao; }
+#line 1362 "y.tab.c"
+    break;
+
+  case 12: /* DECLARACAO: DECLAR_VAR  */
+#line 118 "sintatica.y"
                  {
         yyval.traducao = yyvsp[0].traducao;
       }
-#line 1340 "y.tab.c"
+#line 1370 "y.tab.c"
     break;
 
-  case 10: /* TIPO: TK_TIPO_INT  */
-#line 104 "sintatica.y"
+  case 13: /* TIPO: TK_TIPO_INT  */
+#line 124 "sintatica.y"
                     { yyval.label = "int"; }
-#line 1346 "y.tab.c"
+#line 1376 "y.tab.c"
     break;
 
-  case 11: /* TIPO: TK_TIPO_FLOAT  */
-#line 105 "sintatica.y"
+  case 14: /* TIPO: TK_TIPO_FLOAT  */
+#line 125 "sintatica.y"
                     { yyval.label = "float"; }
-#line 1352 "y.tab.c"
+#line 1382 "y.tab.c"
     break;
 
-  case 12: /* TIPO: TK_TIPO_CHAR  */
-#line 106 "sintatica.y"
+  case 15: /* TIPO: TK_TIPO_CHAR  */
+#line 126 "sintatica.y"
                     { yyval.label = "char"; }
-#line 1358 "y.tab.c"
+#line 1388 "y.tab.c"
     break;
 
-  case 13: /* TIPO: TK_TIPO_BOOL  */
-#line 107 "sintatica.y"
+  case 16: /* TIPO: TK_TIPO_BOOL  */
+#line 127 "sintatica.y"
                     { yyval.label = "bool"; }
-#line 1364 "y.tab.c"
+#line 1394 "y.tab.c"
     break;
 
-  case 14: /* DECLAR_VAR: TIPO TK_ID  */
-#line 111 "sintatica.y"
+  case 17: /* DECLAR_VAR: TIPO TK_ID  */
+#line 131 "sintatica.y"
                  {
         adicionaVar(yyvsp[0].label, yyvsp[-1].label);
         yyval.traducao = "";
       }
-#line 1373 "y.tab.c"
+#line 1403 "y.tab.c"
     break;
 
-  case 15: /* DECLAR_VAR: TIPO TK_ID '=' EXPR  */
-#line 115 "sintatica.y"
+  case 18: /* DECLAR_VAR: TIPO TK_ID '=' EXPR  */
+#line 135 "sintatica.y"
                           {
         adicionaVar(yyvsp[-2].label, yyvsp[-3].label);
-
-		string tipo1 = yyvsp[-3].label;
-		string tipo2 = tabela_simbolos[yyvsp[0].label].tipo;
-		string result = yyvsp[0].label;
-		if (tipo1 != tipo2) {
-			if(tipo1 == "int" && tipo2 == "float"){
-				result = "(int)" + yyvsp[0].label;
-			}
-			else if(tipo1 == "float" && tipo2 == "int"){
-				result = "(float)" + yyvsp[0].label;
-			}
-			else{
-				cout << "Erro: Tipos incompatíveis para atribuição na linha " << numLinha << ".\n";
-				exit(1);
-			}
-		}
         stringstream ss;
-        ss << "\t" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << " = " << result << ";\n";
+		ss = veririficarTipo(yyvsp[-2].label, "=", yyvsp[0].label);
         yyval.traducao = yyvsp[0].traducao + ss.str();
       }
-#line 1400 "y.tab.c"
+#line 1414 "y.tab.c"
     break;
 
-  case 16: /* DECLAR_VAR: TIPO TK_ID '=' TK_CHAR  */
-#line 137 "sintatica.y"
+  case 19: /* DECLAR_VAR: TIPO TK_ID '=' TK_CHAR  */
+#line 141 "sintatica.y"
                              {
         adicionaVar(yyvsp[-2].label, yyvsp[-3].label);
         stringstream ss;
         ss << "\t" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << " = " << yyvsp[0].label << ";\n";
         yyval.traducao = ss.str();
       }
-#line 1411 "y.tab.c"
+#line 1425 "y.tab.c"
     break;
 
-  case 17: /* ATRIB: TK_ID '=' EXPR  */
-#line 145 "sintatica.y"
+  case 20: /* ATRIB: TK_ID '=' EXPR  */
+#line 149 "sintatica.y"
                       {
 	if (tabela_simbolos.find(yyvsp[-2].label) == tabela_simbolos.end()) {
 		cout << "Erro: Variável " << yyvsp[-2].label << " não declarada.\n";
 		exit(1);
 	}
-	string tipo1 = tabela_simbolos[yyvsp[-2].label].tipo;
-	string tipo2 = tabela_simbolos[yyvsp[0].label].tipo;
-	stringstream ss;
-
-	if (tipo1 != tipo2) {
-		if(tipo1 == "int" && tipo2 == "float"){
-			string temp = "t" + to_string(tempVar);
-			adicionaVar(temp, tipo1, true);
-			ss << "\t" << temp << " = (int)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-			yyval.label = temp;
-		}
-		else if(tipo1 == "float" && tipo2 == "int"){
-			string temp = "t" + to_string(tempVar);
-			adicionaVar(temp, tipo1, true);
-			ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-			yyval.label = temp;
-		}
-		else{
-			cout << "Erro: Tipos incompatíveis para atribuição.\n";
-			exit(1);
-		}
-	}
-
-	ss << "\t" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << " = " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-	yyval.traducao = yyvsp[0].traducao + ss.str();
+        stringstream ss;
+		ss = veririficarTipo(yyvsp[-2].label, "=", yyvsp[0].label);
+        yyval.traducao = yyvsp[0].traducao + ss.str();
 }
-#line 1447 "y.tab.c"
+#line 1439 "y.tab.c"
     break;
 
-  case 19: /* EXPR: EXPR_LOG  */
-#line 180 "sintatica.y"
+  case 22: /* EXPR: EXPR_LOG  */
+#line 162 "sintatica.y"
                                {
 		yyval.traducao = yyvsp[0].traducao;
 	}
-#line 1455 "y.tab.c"
+#line 1447 "y.tab.c"
     break;
 
-  case 20: /* EXPR_ARIT: EXPR_ARIT '+' EXPR_TERM  */
-#line 185 "sintatica.y"
+  case 23: /* EXPR_ARIT: EXPR_ARIT '+' EXPR_TERM  */
+#line 167 "sintatica.y"
                                           {
 		stringstream ss;
 		string var1 = yyvsp[-2].label;
@@ -1464,11 +1456,11 @@ yyreduce:
 		yyval.label = "t" + to_string(tempVar-1);
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 	}
-#line 1468 "y.tab.c"
+#line 1460 "y.tab.c"
     break;
 
-  case 21: /* EXPR_ARIT: EXPR_ARIT '-' EXPR_TERM  */
-#line 193 "sintatica.y"
+  case 24: /* EXPR_ARIT: EXPR_ARIT '-' EXPR_TERM  */
+#line 175 "sintatica.y"
                                             {
 		stringstream ss;
 		string var1 = yyvsp[-2].label;
@@ -1478,20 +1470,20 @@ yyreduce:
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 
 	}
-#line 1482 "y.tab.c"
+#line 1474 "y.tab.c"
     break;
 
-  case 22: /* EXPR_ARIT: EXPR_TERM  */
-#line 202 "sintatica.y"
+  case 25: /* EXPR_ARIT: EXPR_TERM  */
+#line 184 "sintatica.y"
                     {
 		yyval. label = yyvsp[0].label;
 		yyval.traducao = yyvsp[0].traducao;
 	}
-#line 1491 "y.tab.c"
+#line 1483 "y.tab.c"
     break;
 
-  case 23: /* EXPR_TERM: EXPR_TERM '*' EXPR_ATOM  */
-#line 208 "sintatica.y"
+  case 26: /* EXPR_TERM: EXPR_TERM '*' EXPR_ATOM  */
+#line 190 "sintatica.y"
                                                   {
 		stringstream ss;
 		string var1 = yyvsp[-2].label;
@@ -1500,11 +1492,11 @@ yyreduce:
 		yyval.label = "t" + to_string(tempVar-1);
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 	}
-#line 1504 "y.tab.c"
+#line 1496 "y.tab.c"
     break;
 
-  case 24: /* EXPR_TERM: EXPR_TERM '/' EXPR_ATOM  */
-#line 216 "sintatica.y"
+  case 27: /* EXPR_TERM: EXPR_TERM '/' EXPR_ATOM  */
+#line 198 "sintatica.y"
                                             {
 		stringstream ss;
 		string var1 = yyvsp[-2].label;
@@ -1513,301 +1505,126 @@ yyreduce:
 		yyval.label = "t" + to_string(tempVar-1);
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 	}
-#line 1517 "y.tab.c"
+#line 1509 "y.tab.c"
     break;
 
-  case 25: /* EXPR_TERM: EXPR_ATOM  */
-#line 224 "sintatica.y"
+  case 28: /* EXPR_TERM: EXPR_ATOM  */
+#line 206 "sintatica.y"
                     {
 		yyval.label = yyvsp[0].label;
 		yyval.traducao = yyvsp[0].traducao;
 	}
-#line 1526 "y.tab.c"
+#line 1518 "y.tab.c"
     break;
 
-  case 26: /* EXPR_LOG: EXPR_LOG TK_AND EXPR_LOG  */
+  case 29: /* EXPR_LOG: EXPR_LOG TK_AND EXPR_REL  */
+#line 214 "sintatica.y"
+                                              {
+		stringstream ss;
+		ss = veririficarTipo(yyvsp[-2].label, "&&", yyvsp[0].label);
+		yyval.label = "t" + to_string(tempVar-1);
+		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
+	}
+#line 1529 "y.tab.c"
+    break;
+
+  case 30: /* EXPR_LOG: EXPR_LOG TK_OR EXPR_REL  */
+#line 220 "sintatica.y"
+                                              {
+		stringstream ss;
+		ss = veririficarTipo(yyvsp[-2].label, "||", yyvsp[0].label);
+		yyval.label = "t" + to_string(tempVar-1);
+		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
+	}
+#line 1540 "y.tab.c"
+    break;
+
+  case 31: /* EXPR_LOG: EXPR_REL  */
+#line 226 "sintatica.y"
+                   {
+		yyval.label = yyvsp[0].label;
+		yyval.traducao = yyvsp[0].traducao;
+	}
+#line 1549 "y.tab.c"
+    break;
+
+  case 32: /* EXPR_REL: EXPR_REL TK_IGUAL EXPR_REL  */
 #line 232 "sintatica.y"
-                                              {
-		string temp = "t" + to_string(tempVar);
-		stringstream ss;
-		ss << "\t" << temp << " = " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << " && " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-		yyval.label = temp;
-		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
-		adicionaVar(temp, "bool", true);
-	}
-#line 1539 "y.tab.c"
-    break;
-
-  case 27: /* EXPR_LOG: EXPR_LOG TK_OR EXPR_LOG  */
-#line 240 "sintatica.y"
-                                              {
-		string temp = "t" + to_string(tempVar);
-		stringstream ss;
-		ss << "\t" << temp << " = " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << " || " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-		yyval.label = temp;
-		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
-		adicionaVar(temp, "bool", true);
-	}
-#line 1552 "y.tab.c"
-    break;
-
-  case 28: /* EXPR_LOG: EXPR_REL  */
-#line 248 "sintatica.y"
-                   {
-		yyval.label = yyvsp[0].label;
-		yyval.traducao = yyvsp[0].traducao;
-	}
-#line 1561 "y.tab.c"
-    break;
-
-  case 29: /* EXPR_REL: EXPR_REL TK_IGUAL EXPR_REL  */
-#line 254 "sintatica.y"
                                                   {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		string tipo1 = tabela_simbolos[yyvsp[-2].label].tipo;
-		string tipo2 = tabela_simbolos[yyvsp[0].label].tipo;
-		adicionaVar(temp, "bool", true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " == " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-			else if(tipo1 == "float" && tipo2 == "int"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " == " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-			else{
-				cout << "Erro: Tipos incompatíveis para comparação.\n";
-				exit(1);
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << " == " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-			yyval.label = temp;
-		}
+		ss = veririficarTipo(yyvsp[-2].label, "==", yyvsp[0].label);
+		yyval.label = "t" + to_string(tempVar-1);
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 	}
-#line 1599 "y.tab.c"
+#line 1560 "y.tab.c"
     break;
 
-  case 30: /* EXPR_REL: EXPR_REL TK_DIFERENTE EXPR_REL  */
-#line 287 "sintatica.y"
+  case 33: /* EXPR_REL: EXPR_REL TK_DIFERENTE EXPR_REL  */
+#line 238 "sintatica.y"
                                                             {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		string tipo1 = tabela_simbolos[yyvsp[-2].label].tipo;
-		string tipo2 = tabela_simbolos[yyvsp[0].label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, "bool", true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " != " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-			else if(tipo1 == "float" && tipo2 == "int"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " != " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-			else{
-				cout << "Erro: Tipos incompatíveis para comparação.\n";
-				exit(1);
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << " != " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-			yyval.label = temp;
-		}
+		ss = veririficarTipo(yyvsp[-2].label, "!=", yyvsp[0].label);
+		yyval.label = "t" + to_string(tempVar-1);
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 	}
-#line 1638 "y.tab.c"
+#line 1571 "y.tab.c"
     break;
 
-  case 31: /* EXPR_REL: EXPR_REL '>' EXPR_REL  */
-#line 321 "sintatica.y"
+  case 34: /* EXPR_REL: EXPR_REL '>' EXPR_REL  */
+#line 244 "sintatica.y"
                                           {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		string tipo1 = tabela_simbolos[yyvsp[-2].label].tipo;
-		string tipo2 = tabela_simbolos[yyvsp[0].label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, "bool", true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " > " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-			else if(tipo1 == "float" && tipo2 == "int"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " > " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-			else{
-				cout << "Erro: Tipos incompatíveis para comparação.\n";
-				exit(1);
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << " > " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-			yyval.label = temp;
-		}
-
+		ss = veririficarTipo(yyvsp[-2].label, ">", yyvsp[0].label);
+		yyval.label = "t" + to_string(tempVar-1);
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 	}
-#line 1678 "y.tab.c"
+#line 1582 "y.tab.c"
     break;
 
-  case 32: /* EXPR_REL: EXPR_REL '<' EXPR_REL  */
-#line 356 "sintatica.y"
+  case 35: /* EXPR_REL: EXPR_REL '<' EXPR_REL  */
+#line 250 "sintatica.y"
                                           {
-		string temp = "t" + to_string(tempVar);
-		stringstream ss;
-		string tipo1 = tabela_simbolos[yyvsp[-2].label].tipo;
-		string tipo2 = tabela_simbolos[yyvsp[0].label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, "bool", true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " < " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-			else if(tipo1 == "float" && tipo2 == "int"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " < " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-			else{
-				cout << "Erro: Tipos incompatíveis para comparação.\n";
-				exit(1);
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << " < " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-			yyval.label = temp;
-		}
-
+		stringstream ss;	
+		ss = veririficarTipo(yyvsp[-2].label, "<", yyvsp[0].label);
+		yyval.label = "t" + to_string(tempVar-1);		
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 	}
-#line 1718 "y.tab.c"
+#line 1593 "y.tab.c"
     break;
 
-  case 33: /* EXPR_REL: EXPR_REL TK_MAIOR_IGUAL EXPR_REL  */
-#line 391 "sintatica.y"
+  case 36: /* EXPR_REL: EXPR_REL TK_MAIOR_IGUAL EXPR_REL  */
+#line 256 "sintatica.y"
                                                                 {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		string tipo1 = tabela_simbolos[yyvsp[-2].label].tipo;
-		string tipo2 = tabela_simbolos[yyvsp[0].label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, "bool", true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " >= " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-			else if(tipo1 == "float" && tipo2 == "int"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " >= " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-			else{
-				cout << "Erro: Tipos incompatíveis para comparação.\n";
-				exit(1);
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << " >= " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-			yyval.label = temp;
-		}
-
+		ss = veririficarTipo(yyvsp[-2].label, ">=", yyvsp[0].label);
+		yyval.label = "t" + to_string(tempVar-1);
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 	}
-#line 1758 "y.tab.c"
+#line 1604 "y.tab.c"
     break;
 
-  case 34: /* EXPR_REL: EXPR_REL TK_MENOR_IGUAL EXPR_REL  */
-#line 426 "sintatica.y"
+  case 37: /* EXPR_REL: EXPR_REL TK_MENOR_IGUAL EXPR_REL  */
+#line 262 "sintatica.y"
                                                                 {
-		string temp = "t" + to_string(tempVar);
 		stringstream ss;
-		string tipo1 = tabela_simbolos[yyvsp[-2].label].tipo;
-		string tipo2 = tabela_simbolos[yyvsp[0].label].tipo;
-		string tipo_result = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
-		adicionaVar(temp, "bool", true);
-
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " <= " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-			else if(tipo1 == "float" && tipo2 == "int"){
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " <= " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << ";\n";
-				yyval.label = temp2;
-			}
-			else{
-				cout << "Erro: Tipos incompatíveis para comparação.\n";
-				exit(1);
-			}
-		}
-		else{
-			ss << "\t" << temp << " = " << tabela_simbolos[yyvsp[-2].label].endereco_memoria << " <= " << tabela_simbolos[yyvsp[0].label].endereco_memoria << ";\n";
-			yyval.label = temp;
-		}
-
+		ss = veririficarTipo(yyvsp[-2].label, "<=", yyvsp[0].label);
+		yyval.label = "t" + to_string(tempVar-1);
 		yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + ss.str();
 	}
-#line 1798 "y.tab.c"
+#line 1615 "y.tab.c"
     break;
 
-  case 35: /* EXPR_REL: EXPR_NOT  */
-#line 461 "sintatica.y"
+  case 38: /* EXPR_REL: EXPR_NOT  */
+#line 268 "sintatica.y"
                    {
 		yyval.label = yyvsp[0].label;
 		yyval.traducao = yyvsp[0].traducao;
 	}
-#line 1807 "y.tab.c"
+#line 1624 "y.tab.c"
     break;
 
-  case 36: /* EXPR_NOT: '!' EXPR_NOT  */
-#line 467 "sintatica.y"
+  case 39: /* EXPR_NOT: '!' EXPR_NOT  */
+#line 274 "sintatica.y"
                                {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -1816,29 +1633,29 @@ yyreduce:
 		yyval.traducao = yyvsp[0].traducao + ss.str();
 		adicionaVar(temp, "bool", true);
 	}
-#line 1820 "y.tab.c"
+#line 1637 "y.tab.c"
     break;
 
-  case 37: /* EXPR_NOT: EXPR_ARIT  */
-#line 475 "sintatica.y"
+  case 40: /* EXPR_NOT: EXPR_ARIT  */
+#line 282 "sintatica.y"
                     {
 		yyval.label = yyvsp[0].label;
 		yyval.traducao = yyvsp[0].traducao;
 	}
-#line 1829 "y.tab.c"
+#line 1646 "y.tab.c"
     break;
 
-  case 38: /* EXPR_ATOM: '(' EXPR ')'  */
-#line 481 "sintatica.y"
+  case 41: /* EXPR_ATOM: '(' EXPR ')'  */
+#line 288 "sintatica.y"
                                 {
 		yyval.label = yyvsp[-1].label;
 		yyval.traducao = yyvsp[-1].traducao;
 	}
-#line 1838 "y.tab.c"
+#line 1655 "y.tab.c"
     break;
 
-  case 39: /* EXPR_ATOM: '-' EXPR_ATOM  */
-#line 485 "sintatica.y"
+  case 42: /* EXPR_ATOM: '-' EXPR_ATOM  */
+#line 292 "sintatica.y"
                                      {
 	string temp = "t" + to_string(tempVar);
 	stringstream ss;
@@ -1850,11 +1667,11 @@ yyreduce:
 	string tipo = tabela_simbolos[yyvsp[0].label].tipo;
 	adicionaVar(temp, tipo, true);
 	}
-#line 1854 "y.tab.c"
+#line 1671 "y.tab.c"
     break;
 
-  case 40: /* EXPR_ATOM: TK_NUM  */
-#line 496 "sintatica.y"
+  case 43: /* EXPR_ATOM: TK_NUM  */
+#line 303 "sintatica.y"
                  {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -1868,11 +1685,11 @@ yyreduce:
 
 		adicionaVar(temp, tipo, true);
 	}
-#line 1872 "y.tab.c"
+#line 1689 "y.tab.c"
     break;
 
-  case 41: /* EXPR_ATOM: TK_ID  */
-#line 509 "sintatica.y"
+  case 44: /* EXPR_ATOM: TK_ID  */
+#line 316 "sintatica.y"
                 {
 		if (tabela_simbolos.find(yyvsp[0].label) == tabela_simbolos.end()) {
 			cout << "Erro: Variável " << yyvsp[0].label << " não declarada.\n";
@@ -1881,20 +1698,20 @@ yyreduce:
 		yyval.label = yyvsp[0].label;
 		yyval.traducao = "";
 	}
-#line 1885 "y.tab.c"
+#line 1702 "y.tab.c"
     break;
 
-  case 42: /* EXPR_ATOM: COVERT_TYPE  */
-#line 517 "sintatica.y"
+  case 45: /* EXPR_ATOM: COVERT_TYPE  */
+#line 324 "sintatica.y"
                       {
 		yyval.label = yyvsp[0].label;
 		yyval.traducao = yyvsp[0].traducao;
 	}
-#line 1894 "y.tab.c"
+#line 1711 "y.tab.c"
     break;
 
-  case 43: /* EXPR_ATOM: TK_BOOL_TRUE  */
-#line 521 "sintatica.y"
+  case 46: /* EXPR_ATOM: TK_BOOL_TRUE  */
+#line 328 "sintatica.y"
                        {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -1903,11 +1720,11 @@ yyreduce:
 		yyval.traducao = ss.str();
 		adicionaVar(temp, "bool", true);
 	}
-#line 1907 "y.tab.c"
+#line 1724 "y.tab.c"
     break;
 
-  case 44: /* EXPR_ATOM: TK_BOOL_FALSE  */
-#line 529 "sintatica.y"
+  case 47: /* EXPR_ATOM: TK_BOOL_FALSE  */
+#line 336 "sintatica.y"
                         {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -1916,11 +1733,11 @@ yyreduce:
 		yyval.traducao = ss.str();
 		adicionaVar(temp, "bool", true);
 	}
-#line 1920 "y.tab.c"
+#line 1737 "y.tab.c"
     break;
 
-  case 45: /* COVERT_TYPE: TK_TIPO_INT '(' EXPR ')'  */
-#line 539 "sintatica.y"
+  case 48: /* COVERT_TYPE: TK_TIPO_INT '(' EXPR ')'  */
+#line 346 "sintatica.y"
                                  {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -1929,11 +1746,11 @@ yyreduce:
 		yyval.traducao = yyvsp[-1].traducao + ss.str();
 		adicionaVar(temp, "int", true);
 	}
-#line 1933 "y.tab.c"
+#line 1750 "y.tab.c"
     break;
 
-  case 46: /* COVERT_TYPE: TK_TIPO_FLOAT '(' EXPR ')'  */
-#line 547 "sintatica.y"
+  case 49: /* COVERT_TYPE: TK_TIPO_FLOAT '(' EXPR ')'  */
+#line 354 "sintatica.y"
                                      {
 		string temp = "t" + to_string(tempVar);
 		stringstream ss;
@@ -1942,11 +1759,11 @@ yyreduce:
 		yyval.traducao = yyvsp[-1].traducao + ss.str();
 		adicionaVar(temp, "float", true);
 	}
-#line 1946 "y.tab.c"
+#line 1763 "y.tab.c"
     break;
 
 
-#line 1950 "y.tab.c"
+#line 1767 "y.tab.c"
 
       default: break;
     }
@@ -2139,7 +1956,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 556 "sintatica.y"
+#line 363 "sintatica.y"
 
 
 #include "lex.yy.c"
@@ -2152,7 +1969,7 @@ int main(int argc, char* argv[]) {
 }
 
 void yyerror(string MSG) {
-	cout << "Erro sintático: " << MSG << "na linha: " << numLinha << endl;
+	cout << "Erro sintático: " << MSG << " na linha: " << numLinha << endl;
 	exit(1);
 }
 
@@ -2175,7 +1992,28 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 	stringstream ss;
 	string tipo1 = tabela_simbolos[var1].tipo;
 	string tipo2 = tabela_simbolos[var2].tipo;
-	if(operador == "+" || operador == "-" || operador == "*" || operador == "/"){		
+	string endereco1 = tabela_simbolos[var1].endereco_memoria;
+	string endereco2 = tabela_simbolos[var2].endereco_memoria;
+	
+	if(operador == "="){
+		if(tipo1 != tipo2){
+			if(tipo1 == "int" && tipo2 == "float"){
+				ss << "\t" << endereco1 << " = (int)" << endereco2 << ";\n";
+			}
+			else if(tipo1 == "float" && tipo2 == "int"){
+				ss << "\t" << endereco1 << " = (float)" << endereco2 << ";\n";
+			}
+			else{
+				cout << "Erro: Tipos incompatíveis para atribuição da variavel: " << var1 << "\n" ;
+				exit(1);
+			}
+		}
+		else{
+			ss << "\t" << endereco1 << " = " << endereco2 << ";\n";
+		}
+		return ss;
+	}	
+	else if(operador == "+" || operador == "-" || operador == "*" || operador == "/"){		
 		if(tipo1 != tipo2){
 			string result_tipo = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
 			string temp = "t" + to_string(tempVar);
@@ -2184,12 +2022,12 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 			adicionaVar(temp2, result_tipo, true);
 
 			if(tipo1 == "int" && tipo2 == "float"){
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[var1].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << tabela_simbolos[var2].endereco_memoria << ";\n";
+				ss << "\t" << temp << " = (float)" << endereco1 << ";\n";
+				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << endereco2 << ";\n";
 			}
 			else if(tipo1 == "float" && tipo2 == "int"){
-				ss << "\t" << temp << " = (float)" << tabela_simbolos[var2].endereco_memoria << ";\n";
-				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << tabela_simbolos[var1].endereco_memoria << ";\n";
+				ss << "\t" << temp << " = (float)" << endereco2 << ";\n";
+				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << endereco1 << ";\n";
 			}
 			else{
 				cout << "Erro: Tipos incompatíveis para operação " << operador << ".\n";
@@ -2199,7 +2037,80 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 		else{
 			string temp = "t" + to_string(tempVar);
 			adicionaVar(temp, tipo1, true);
-			ss << "\t" << temp << " = " << tabela_simbolos[var1].endereco_memoria << " " << operador << " " << tabela_simbolos[var2].endereco_memoria << ";\n";
+			ss << "\t" << temp << " = " << endereco1 << " " << operador << " " << endereco2 << ";\n";
+		}
+	}
+	else if(operador == "||" || operador == "&&"){
+		if(tipo1 != "bool" || tipo2 != "bool"){
+			cout << "Erro: Operador lógico " << operador << " só pode ser usado com tipos booleanos.\n";
+			exit(1);
+		}
+		string temp = "t" + to_string(tempVar);
+		adicionaVar(temp, "bool", true);
+		ss << "\t" << temp << " = " << endereco1 << " " << operador << " " << endereco2 << ";\n";
+	}
+
+	else if(operador == "==" || operador == "!="){
+		if(tipo1 != tipo2){
+			if(tipo1 == "int" && tipo2 == "float"){
+				string temp = "t" + to_string(tempVar);
+				adicionaVar(temp, "bool", true);
+				string temp2 = "t" + to_string(tempVar);
+				adicionaVar(temp2, "bool", true);
+				ss << "\t" << temp << " = (float)" << endereco1 << ";\n";
+				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << endereco2 << ";\n";
+			}
+			else if(tipo1 == "float" && tipo2 == "int"){
+				string temp = "t" + to_string(tempVar);
+				adicionaVar(temp, "bool", true);
+				string temp2 = "t" + to_string(tempVar);
+				adicionaVar(temp2, "bool", true);
+				ss << "\t" << temp << " = (float)" << endereco2 << ";\n";
+				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << endereco1 << ";\n";
+			}
+			else{
+				cout << "Erro: Tipos incompatíveis para operação de comparação.\n";
+				exit(1);
+			}
+		}
+		else{
+			string temp = "t" + to_string(tempVar);
+			adicionaVar(temp, "bool", true);
+			ss << "\t" << temp << " = ("<< endereco1 <<" "<< operador <<" "<< endereco2<<");\n";
+		}
+	}
+
+	else if(operador == ">" || operador == "<" || operador == ">=" || operador == "<="){
+		if(tipo1 != tipo2){
+			if(tipo1 == "int" && tipo2 == "float"){
+				string temp = "t" + to_string(tempVar);
+				adicionaVar(temp, "bool", true);
+				string temp2 = "t" + to_string(tempVar);
+				adicionaVar(temp2, "bool", true);
+				ss << "\t" << temp << " = (float)" << endereco1 << ";\n";
+				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << endereco2 << ";\n";
+			}
+			else if(tipo1 == "float" && tipo2 == "int"){
+				string temp = "t" + to_string(tempVar);
+				adicionaVar(temp, "bool", true);
+				string temp2 = "t" + to_string(tempVar);
+				adicionaVar(temp2, "bool", true);
+				ss << "\t" << temp << " = (float)" << endereco2 << ";\n";
+				ss << "\t" << temp2 << " = " << temp << " " << operador << " " << endereco1 << ";\n";
+			}
+			else{
+				cout << "Erro: Tipos incompatíveis para operação de comparação.\n";
+				exit(1);
+			}
+		}
+		else if(tipo1 != "bool" && tipo2 != "bool"){
+			string temp = "t" + to_string(tempVar);
+			adicionaVar(temp, "bool", true);
+			ss << "\t" << temp << " = " << endereco1 << " " << operador << " " << endereco2 << ";\n";
+		}
+		else{
+			cout << "Erro: Operador de comparação " << operador << " só pode ser usado com tipos numéricos.\n";
+			exit(1);
 		}
 	}
 	else{
