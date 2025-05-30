@@ -8,7 +8,7 @@ using namespace std;
 extern YYSTYPE yylval;
 %}
 
-ESPACO [ \t]
+ESPACO [\t]
 DIGITO [0-9]
 LETRA [A-Za-z_]
 
