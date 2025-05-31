@@ -14,6 +14,7 @@ LETRA [A-Za-z_]
 
 NUM_INTEIRO -?{DIGITO}+
 NUM_PONTO -?{DIGITO}+"."{DIGITO}+
+STRING_LITERAL \"[^\"\n]*\"
 
 
 ID {LETRA}({LETRA}|{DIGITO})*
@@ -25,7 +26,7 @@ ID {LETRA}({LETRA}|{DIGITO})*
 "float"     { return TK_TIPO_FLOAT;}
 "char"      { return TK_TIPO_CHAR;}
 "bool"      { return TK_TIPO_BOOL;}
-
+"string"    { return TK_TIPO_STRING; }
 
 "true"      {
 	yylval.traducao = "true";
@@ -55,6 +56,14 @@ ID {LETRA}({LETRA}|{DIGITO})*
 	yylval.traducao = yytext;
 	yylval.label = yytext;
 	return TK_NUM;
+}
+
+{STRING_LITERAL} {
+    string s = yytext;
+    // Remove as aspas do valor para yylval.label, mas mantém em traducao para o C
+    yylval.label = s.substr(1, s.length() - 2);
+    yylval.traducao = yytext; // Ex: "\"ola\"" (para o código C)
+    return TK_STRING_LITERAL;
 }
 
 {ID} {

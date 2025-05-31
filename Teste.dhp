@@ -1,11 +1,7 @@
-int b = 1;
-
 main()
 {
-    bool a = 5 < 5.5;
-    {
-        b +1;
-        a = true;
-    }
+    string s1 = "Hello World";
+    string s2 = "Nós é brabo";
+    string s3 = s1 + " " + s2;
 
 }

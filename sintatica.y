@@ -46,7 +46,8 @@ map<string, string> tipoTraducao = {
 	{"int", "int"},
 	{"float", "float"},
 	{"char", "char"},
-	{"bool", "int"}
+	{"bool", "int"},
+	{"string", "char*"}
 };
 
 
@@ -60,6 +61,7 @@ void yyerror(string);
 %token TK_IGUAL TK_DIFERENTE TK_MAIOR_IGUAL TK_MENOR_IGUAL
 %token TK_AND TK_OR
 %token TK_CHAR TK_BOOL_TRUE TK_BOOL_FALSE
+%token TK_TIPO_STRING TK_STRING_LITERAL
 
 
 %start S
@@ -146,6 +148,7 @@ TIPO:
     | TK_TIPO_FLOAT { $$.label = "float"; }
     | TK_TIPO_CHAR  { $$.label = "char"; }
     | TK_TIPO_BOOL  { $$.label = "bool"; }
+	| TK_TIPO_STRING { $$.label = "string"; } // <<< ADICIONE ESTA ALTERNATIVA
 ;
 
 DECLAR_VAR:
@@ -180,28 +183,108 @@ ATRIB: TK_ID '=' EXPR {
 ;
 
 EXPR:
-	| EXPR_LOG %prec TK_OR {
-		$$.traducao = $1.traducao;
-	}
+    EXPR_LOG { // Removido o '|' inicial e o '%prec TK_OR'
+        $$.label = $1.label;     // <<< ADICIONADO E CRUCIAL
+        $$.traducao = $1.traducao;
+    }
 ;
 EXPR_ARIT:
 	EXPR_ARIT '+' EXPR_TERM %prec '+' {
-		stringstream ss;
-		string var1 = $1.label;
-		string var2 = $3.label;
-		ss = veririficarTipo(var1, "+", var2);
-		$$.label = "t" + to_string(tempVar-1);
-		$$.traducao = $1.traducao + $3.traducao + ss.str();
-	}
-	| EXPR_ARIT '-' EXPR_TERM %prec '-' {
-		stringstream ss;
-		string var1 = $1.label;
-		string var2 = $3.label;
-		ss = veririficarTipo(var1, "-", var2);
-		$$.label = "t" + to_string(tempVar-1);
-		$$.traducao = $1.traducao + $3.traducao + ss.str();
+        // Buscar informações dos operandos da tabela de símbolos (usando buscarVariavel)
+        int idx_op1 = buscarVariavel($1.label);
+        int idx_op2 = buscarVariavel($3.label);
 
-	}
+        // Adicione checagens de erro se idx_op1 ou idx_op2 for -1
+
+        string tipo1 = pilha[idx_op1][$1.label].tipo;
+        string tipo2 = pilha[idx_op2][$3.label].tipo;
+        string op1_c_name = pilha[idx_op1][$1.label].endereco_memoria;
+        string op2_c_name = pilha[idx_op2][$3.label].endereco_memoria;
+        
+        stringstream ss_op_code;
+
+        if (tipo1 == "string" && tipo2 == "string") {
+            // LÓGICA DE CONCATENAÇÃO INLINE (como no exemplo C que você aprovou)
+
+            // 1. Criar chaves para temporárias de tamanho e resultado, e adicioná-las
+            string chave_len1 = "t_len_" + to_string(tempVar);
+            adicionaVar(chave_len1, "int", true);
+            string c_nome_len1 = pilha[pilha.size()-1][chave_len1].endereco_memoria;
+
+            string chave_len2 = "t_len_" + to_string(tempVar);
+            adicionaVar(chave_len2, "int", true);
+            string c_nome_len2 = pilha[pilha.size()-1][chave_len2].endereco_memoria;
+
+            string chave_res_str = "t_str_res_" + to_string(tempVar);
+            adicionaVar(chave_res_str, "string", true);
+            string c_nome_res_str = pilha[pilha.size()-1][chave_res_str].endereco_memoria;
+
+            // 2. Gerar código C para calcular tamanho de op1_c_name -> c_nome_len1
+            ss_op_code << qtdTab() << c_nome_len1 << " = 0;\n";
+            ss_op_code << qtdTab() << "if (" << op1_c_name << " != NULL) {\n";
+            ss_op_code << qtdTab(1) << "while (" << op1_c_name << "[" << c_nome_len1 << "] != '\\0') {\n";
+            ss_op_code << qtdTab(2) << c_nome_len1 << "++;\n";
+            ss_op_code << qtdTab(1) << "}\n";
+            ss_op_code << qtdTab() << "}\n";
+
+            // 3. Gerar código C para calcular tamanho de op2_c_name -> c_nome_len2
+            ss_op_code << qtdTab() << c_nome_len2 << " = 0;\n";
+            ss_op_code << qtdTab() << "if (" << op2_c_name << " != NULL) {\n";
+            ss_op_code << qtdTab(1) << "while (" << op2_c_name << "[" << c_nome_len2 << "] != '\\0') {\n";
+            ss_op_code << qtdTab(2) << c_nome_len2 << "++;\n";
+            ss_op_code << qtdTab(1) << "}\n";
+            ss_op_code << qtdTab() << "}\n";
+
+            // 4. Gerar código C para alocar memória (malloc) -> c_nome_res_str
+            ss_op_code << qtdTab() << c_nome_res_str << " = (char*)malloc("
+                       << c_nome_len1 << " + " << c_nome_len2 << " + 1);\n";
+            ss_op_code << qtdTab() << "if (" << c_nome_res_str << " == NULL) {\n";
+            ss_op_code << qtdTab(1) << "fprintf(stderr, \"Erro critico: Falha na alocacao de memoria para string concatenada.\\n\");\n";
+            ss_op_code << qtdTab(1) << "exit(1);\n";
+            ss_op_code << qtdTab() << "}\n";
+
+            // 5. Gerar código C para copiar op1_c_name para c_nome_res_str (strcpy)
+            ss_op_code << qtdTab() << "if (" << op1_c_name << " != NULL) {\n";
+            ss_op_code << qtdTab(1) << "strcpy(" << c_nome_res_str << ", " << op1_c_name << ");\n";
+            ss_op_code << qtdTab() << "} else {\n";
+            ss_op_code << qtdTab(1) << c_nome_res_str << "[0] = '\\0';\n";
+            ss_op_code << qtdTab() << "}\n";
+
+            // 6. Gerar código C para concatenar op2_c_name a c_nome_res_str (strcat)
+            ss_op_code << qtdTab() << "if (" << op2_c_name << " != NULL) {\n";
+            ss_op_code << qtdTab(1) << "strcat(" << c_nome_res_str << ", " << op2_c_name << ");\n";
+            ss_op_code << qtdTab() << "}\n";
+
+            $$.label = chave_res_str; 
+            $$.traducao = $1.traducao + $3.traducao + ss_op_code.str();
+
+        } else if ( (tipo1 == "string" && tipo2 != "string") || (tipo1 != "string" && tipo2 == "string") ) {
+            yyerror("Concatenacao de string com tipo incompativel (" + tipo1 + ", " + tipo2 + ")");
+        } else { // Caso numérico: chamar veririficarTipo
+            // Note que veririficarTipo retorna stringstream, não string diretamente.
+            // E $$.label precisa ser "t" + to_string(tempVar-1) se veririficarTipo cria a temp.
+            stringstream resultado_verificacao;
+            resultado_verificacao = veririficarTipo($1.label, "+", $3.label);
+            $$.label = "t" + to_string(tempVar-1); // Assume que veririficarTipo criou uma temp e incrementou tempVar
+            $$.traducao = $1.traducao + $3.traducao + resultado_verificacao.str();
+        }
+    }
+    | EXPR_ARIT '-' EXPR_TERM %prec '-' {
+        // Chamar veririficarTipo aqui, mas antes verificar se algum é string
+        int idx_op1 = buscarVariavel($1.label);
+        int idx_op2 = buscarVariavel($3.label);
+        string tipo1 = pilha[idx_op1][$1.label].tipo;
+        string tipo2 = pilha[idx_op2][$3.label].tipo;
+
+        if (tipo1 == "string" || tipo2 == "string") {
+            yyerror("Operador '-' nao aplicavel a strings");
+        } else {
+            stringstream resultado_verificacao;
+            resultado_verificacao = veririficarTipo($1.label, "-", $3.label);
+            $$.label = "t" + to_string(tempVar-1);
+            $$.traducao = $1.traducao + $3.traducao + resultado_verificacao.str();
+        }
+    }
 	| EXPR_TERM {
 		$$. label = $1.label;
 		$$.traducao = $1.traducao;
@@ -306,62 +389,127 @@ EXPR_NOT:
 	}
 ;
 EXPR_ATOM:
-	'(' EXPR ')'  %prec '(' {
-		$$.label = $2.label;
-		$$.traducao = $2.traducao;
-	}
-	| '-' EXPR_ATOM %prec UMINUS {
-	string temp = "t" + to_string(tempVar);
-	stringstream ss;
-	ss << qtdTab() << temp << " = -" << $2.label << ";\n";
-	$$.label = temp;
-	$$.traducao = $2.traducao + ss.str();
+    '(' EXPR ')'  %prec '(' {
+        $$.label = $2.label;
+        $$.traducao = $2.traducao;
+    }
+    | '-' EXPR_ATOM %prec UMINUS {
+        // 1. Buscar informações do operando ($2)
+        int indice_escopo_operando = buscarVariavel($2.label);
+        if (indice_escopo_operando == -1) {
+            yyerror("Variavel '" + $2.label + "' nao declarada (operando de UMINUS)");
+        }
+        string tipo_operando = pilha[indice_escopo_operando][$2.label].tipo;
+        string c_nome_operando = pilha[indice_escopo_operando][$2.label].endereco_memoria;
 
-	// Inferir tipo baseado em $2
-	string tipo = pilha[buscarVariavel($2.label)][$2.label].tipo;
-	adicionaVar(temp, tipo, true);
-	}
-	| TK_NUM {
-		string temp = "t" + to_string(tempVar);
-		stringstream ss;
-		ss << qtdTab() << temp << " = " << $1.traducao << ";\n";
-		$$.label = temp;
-		$$.traducao = ss.str();
+        // 2. Verificar tipo do operando
+        if (tipo_operando == "string" || tipo_operando == "bool") {
+            yyerror("Operador unario '-' nao pode ser aplicado ao tipo '" + tipo_operando + "'");
+        }
+        string tipo_resultado = tipo_operando;
 
-		// Inferir tipo
-		string tipo = ($1.traducao.find('.') != string::npos) ? "float" : "int";
-					
+        // 3. Criar chave para a nova temporária e adicionar à tabela
+        string chave_temp_resultado = "t_uminus_" + to_string(tempVar);
+        adicionaVar(chave_temp_resultado, tipo_resultado, true);
 
-		adicionaVar(temp, tipo, true);
-	}
-	| TK_ID {
-		if (buscarVariavel($1.label) == -1) {
-			cout << "Erro: Variável " << $1.label << " não declarada.\n";
-			exit(1);
-		}
-		$$.label = $1.label;
-		$$.traducao = "";
-	}
-	| COVERT_TYPE {
-		$$.label = $1.label;
-		$$.traducao = $1.traducao;
-	}
-	| TK_BOOL_TRUE {
-		string temp = "t" + to_string(tempVar);
-		stringstream ss;
-		ss << qtdTab() << temp << " = 1;\n";
-		$$.label = temp;
-		$$.traducao = ss.str();
-		adicionaVar(temp, "bool", true);
-	}
-	| TK_BOOL_FALSE {
-		string temp = "t" + to_string(tempVar);
-		stringstream ss;
-		ss << qtdTab() << temp << " = 0;\n";
-		$$.label = temp;
-		$$.traducao = ss.str();
-		adicionaVar(temp, "bool", true);
-	}
+        // 4. Obter o nome C da nova temporária
+        string c_nome_resultado = pilha[pilha.size()-1][chave_temp_resultado].endereco_memoria;
+
+        // 5. Gerar código C
+        stringstream ss_code;
+        ss_code << qtdTab() << c_nome_resultado << " = -" << c_nome_operando << ";\n";
+        
+        // 6. Definir atributos
+        $$.label = chave_temp_resultado;
+        $$.traducao = $2.traducao + ss_code.str();
+    }
+    | TK_NUM {
+        // 1. Criar chave para a temporária do número
+        string chave_temp_num = "t_num_" + to_string(tempVar);
+        
+        // 2. Inferir tipo e adicionar à tabela
+        string tipo_num = ($1.traducao.find('.') != string::npos) ? "float" : "int";
+        adicionaVar(chave_temp_num, tipo_num, true);
+
+        // 3. Obter o nome C da temporária
+        string c_nome_num = pilha[pilha.size()-1][chave_temp_num].endereco_memoria;
+        
+        // 4. Gerar código C
+        stringstream ss_code;
+        ss_code << qtdTab() << c_nome_num << " = " << $1.traducao << ";\n"; // $1.traducao é o valor literal do número
+        
+        // 5. Definir atributos
+        $$.label = chave_temp_num;
+        $$.traducao = ss_code.str();
+    }
+    | TK_ID {
+        if (buscarVariavel($1.label) == -1) { // $1.label é a chave (nome original do ID)
+            yyerror("Variavel '" + $1.label + "' nao declarada");
+        }
+        // Para um ID usado como valor, o label é o próprio nome/chave do ID.
+        // O endereco_memoria será usado por regras superiores quando precisarem do valor.
+        $$.label = $1.label; 
+        $$.traducao = ""; // Não gera novo código C aqui, apenas passa o nome/chave
+    }
+    | COVERT_TYPE { // Assumindo que COVERT_TYPE já define $$.label e $$.traducao corretamente
+        $$.label = $1.label;
+        $$.traducao = $1.traducao;
+    }
+    | TK_BOOL_TRUE {
+        // 1. Criar chave para a temporária do booleano
+        string chave_temp_true = "t_bool_" + to_string(tempVar);
+        
+        // 2. Adicionar à tabela
+        adicionaVar(chave_temp_true, "bool", true);
+
+        // 3. Obter o nome C da temporária
+        string c_nome_true = pilha[pilha.size()-1][chave_temp_true].endereco_memoria;
+        
+        // 4. Gerar código C
+        stringstream ss_code;
+        ss_code << qtdTab() << c_nome_true << " = 1;\n"; // true é 1 em C
+        
+        // 5. Definir atributos
+        $$.label = chave_temp_true;
+        $$.traducao = ss_code.str();
+    }
+    | TK_BOOL_FALSE {
+        // 1. Criar chave para a temporária do booleano
+        string chave_temp_false = "t_bool_" + to_string(tempVar);
+
+        // 2. Adicionar à tabela
+        adicionaVar(chave_temp_false, "bool", true);
+        
+        // 3. Obter o nome C da temporária
+        string c_nome_false = pilha[pilha.size()-1][chave_temp_false].endereco_memoria;
+
+        // 4. Gerar código C
+        stringstream ss_code;
+        ss_code << qtdTab() << c_nome_false << " = 0;\n"; // false é 0 em C
+        
+        // 5. Definir atributos
+        $$.label = chave_temp_false;
+        $$.traducao = ss_code.str();
+    }
+    | TK_STRING_LITERAL { // <<< ADICIONADO E CORRIGIDO
+        // 1. Criar chave para a temporária do literal string
+        string chave_temp_sl = "t_sl_" + to_string(tempVar);
+        
+        // 2. Adicionar à tabela com tipo "string"
+        adicionaVar(chave_temp_sl, "string", true);
+
+        // 3. Obter o nome C da temporária (será algo como "tN")
+        string c_nome_sl = pilha[pilha.size()-1][chave_temp_sl].endereco_memoria;
+        
+        // 4. Gerar código C
+        // $1.traducao do lexer já é o literal C com aspas (ex: "\"ola\"")
+        stringstream ss_code;
+        ss_code << qtdTab() << c_nome_sl << " = " << $1.traducao << ";\n";
+        
+        // 5. Definir atributos
+        $$.label = chave_temp_sl; // O label é a chave da temporária
+        $$.traducao = ss_code.str();  // O código C gerado
+    }
 ;
 COVERT_TYPE:
 	TK_TIPO_INT '(' EXPR ')' {
