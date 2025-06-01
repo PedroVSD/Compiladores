@@ -22,6 +22,7 @@ debug: 	all
 
 translate: glf
 		./glf < Teste.dhp
+		./glf < Teste.dhp > resultado.c
 
 clean:
 	rm y.tab.c

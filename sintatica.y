@@ -24,6 +24,7 @@ string qtdTab(int dif = 0);
 int tempVar = 0;
 int defVar = 0;
 int defbloco = 0;
+int defgoto = 0;
 
 struct atributos {
 	string label;
@@ -62,6 +63,7 @@ void yyerror(string);
 %token TK_AND TK_OR
 %token TK_CHAR TK_BOOL_TRUE TK_BOOL_FALSE
 %token TK_TIPO_STRING TK_STRING_LITERAL
+%token TK_IF TK_ELSE TK_WHILE TK_FOR TK_DO
 
 
 %start S
@@ -87,15 +89,16 @@ S:
 	}
 ;
 INICIO:
-	COMANDOS MAIN
+	DECLARACAO MAIN
 	{
 		$$.traducao = $1.traducao + $2.traducao;
 	}
-	| COMANDOS
+	| DECLARACAO
 	{
 		$$.traducao = $1.traducao;
 	}
-	;
+;
+
 MAIN:
 	 TK_MAIN '(' ')' BLOCO {
 
@@ -104,7 +107,6 @@ MAIN:
 
 		ss << $4.traducao << "\n";
 
-		ss << "\treturn 0;\n";
 
 		$$.traducao = ss.str();
 	  }
@@ -113,10 +115,18 @@ MAIN:
 BLOCO: { criarPilha(); } '{' COMANDOS '}' {
 	stringstream ss;
 	ss << qtdTab(-1) << "{\n";
+
+	// Declarações das variáveis
 	ss << fecharPilha().str();
 	ss << "\n";
+
+	// Comandos dentro do bloco
     ss << $3.traducao;
+
+	// Se o bloco for o principal, adiciona retorno
+	if(defbloco == 1) { ss << "\n" << qtdTab(1) << "return 0;\n"; }
 	ss << qtdTab() << "}\n";
+
 	$$.traducao = ss.str();
 }
 ;
@@ -131,16 +141,22 @@ COMANDOS:
 ;
 
 COMANDO:
-	  DECLARACAO ';'{ $$.traducao = $1.traducao; }
+	  DECLAR_VAR ';'{ $$.traducao = $1.traducao; }
 	| ATRIB ';'     { $$.traducao = $1.traducao; }
 	| EXPR ';'      { $$.traducao = $1.traducao; }
 	| BLOCO 		{ $$.traducao = $1.traducao; }
+	| LOOP          { $$.traducao = $1.traducao; }
 ;
 
 DECLARACAO:
-      DECLAR_VAR {
+      DECLAR_VAR ';' DECLARACAO 
+	  {
         $$.traducao = $1.traducao;
       }
+	  | 
+	  {
+		$$.traducao = "";
+	  }
 ;
 
 TIPO:
@@ -179,7 +195,126 @@ ATRIB: TK_ID '=' EXPR {
 		ss = veririficarTipo($1.label, "=", $3.label);
         $$.traducao = $3.traducao + ss.str();
 }
+;
 
+LOOP:
+	TK_WHILE '(' EXPR ')' BLOCO {
+		
+		//Verificações
+		if (buscarVariavel($3.label) == -1) {
+			yyerror("Variável '" + $3.label + "' não declarada no loop while.");
+		}
+		if (pilha[buscarVariavel($3.label)][$3.label].tipo != "bool") {
+			yyerror("Condição do loop while deve ser do tipo booleano, mas é '" + pilha[buscarVariavel($3.label)][$3.label].tipo + "'.");
+		}
+
+		// Geração de código		
+		stringstream ss;
+		string temp = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria; // Endereço de memória da variável condicional
+
+
+		ss << $3.traducao; // Traduz a expressão condicional
+
+		ss << "\n";
+
+		ss << qtdTab(-1) << "BeginWhile" << defgoto << ":\n";
+
+		ss << qtdTab() << "if (!" << temp << ") goto EndWhile" << defgoto << ";\n";
+
+		ss << "\n";
+
+		ss << $5.traducao; // Traduz o bloco do loop
+
+		ss << "\n"; // Adiciona uma nova linha para melhor legibilidade
+
+		ss << $3.traducao; // Reavalia a condição do loop
+
+		ss << qtdTab() << "goto BeginWhile" << defgoto << ";\n";
+
+		ss << qtdTab(-1) << "EndWhile" << defgoto << ":\n";
+		defgoto++; // Incrementa o contador de blocos de loop
+		$$.traducao = ss.str();
+	}
+	| TK_DO BLOCO TK_WHILE '(' EXPR ')' ';' {
+
+		// Verificações
+		if (buscarVariavel($5.label) == -1) {
+			yyerror("Variável '" + $5.label + "' não declarada no loop do-while.");
+		}
+		if (pilha[buscarVariavel($5.label)][$5.label].tipo != "bool") {
+			yyerror("Condição do loop do-while deve ser do tipo booleano, mas é '" + pilha[buscarVariavel($5.label)][$5.label].tipo + "'.");
+		}
+
+		// Geração de código
+		stringstream ss;
+		string temp = pilha[buscarVariavel($5.label)][$5.label].endereco_memoria; // Endereço de memória da variável condicional
+
+		ss << "\n";
+
+		ss << qtdTab(-1) << "BeginDoWhile" << defgoto << ":\n";
+
+		ss << $2.traducao; // Traduz o bloco do loop
+
+		ss << "\n";
+
+		ss << $5.traducao; // Traduz a expressão condicional 
+
+		ss << qtdTab() << "if (!" << temp << ") goto BeginDoWhile" << defgoto << ";\n";
+
+		ss << "\n";
+		
+		defgoto++; // Incrementa o contador de blocos de loop
+		$$.traducao = ss.str();
+	}
+	| TK_FOR '(' DECLAR_VAR ';' EXPR ';' ATRIB ')' BLOCO {
+
+		// Verificações
+		if($3.traducao.empty()) {
+			cout << "Erro: A variável de controle do loop Precisa ser inicializada.\n";
+			exit(1);
+		}
+		if (buscarVariavel($5.label) == -1) {
+			yyerror("Variável '" + $5.label + "' não declarada no loop for.");
+		}
+		if (pilha[buscarVariavel($5.label)][$5.label].tipo != "bool") {
+			yyerror("Condição do loop for deve ser do tipo booleano, mas é '" + pilha[buscarVariavel($5.label)][$5.label].tipo + "'.");
+		}
+		if (buscarVariavel($7.label) == -1) {
+			yyerror("Variável '" + $7.label + "' não declarada no loop for.");
+		}
+
+
+		// Geração de código
+		stringstream ss;
+		string temp = pilha[buscarVariavel($5.label)][$5.label].endereco_memoria;
+
+		ss << "\n";
+
+		ss << $3.traducao; // Traduz a expressão de inicialização
+
+		ss << qtdTab(-1) << "BeginFor" << defgoto << ":\n";
+
+		ss << $5.traducao; // Traduz a expressão condicional
+
+		ss << "\n";
+
+		ss << qtdTab() << "if (!" << temp << ") goto EndFor" << defgoto << ";\n";
+
+		ss << "\n";
+
+		ss << $9.traducao; // Traduz o bloco do loop
+
+		ss << "\n";
+
+		ss << $7.traducao; // Traduz a expressão de iteração
+
+		ss << qtdTab() << "goto BeginFor" << defgoto << ";\n";
+
+		ss << qtdTab(-1) << "EndFor" << defgoto << ":\n";
+		
+		defgoto++; // Incrementa o contador de blocos de loop
+		$$.traducao = ss.str();
+	}
 ;
 
 EXPR:
@@ -589,11 +724,10 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 	}	
 	else if(operador == "+" || operador == "-" || operador == "*" || operador == "/"){		
 		if(tipo1 != tipo2){
-			string result_tipo = (tipo1 == "float" || tipo2 == "float") ? "float" : "int";
 			string temp = "t" + to_string(tempVar);
-			adicionaVar(temp, result_tipo, true);
+			adicionaVar(temp, "float", true);
 			string temp2 = "t" + to_string(tempVar);
-			adicionaVar(temp2, result_tipo, true);
+			adicionaVar(temp2, "float", true);
 
 			if(tipo1 == "int" && tipo2 == "float"){
 				ss << qtdTab() << temp << " = (float)" << endereco1 << ";\n";
@@ -628,7 +762,7 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 		if(tipo1 != tipo2){
 			if(tipo1 == "int" && tipo2 == "float"){
 				string temp = "t" + to_string(tempVar);
-				adicionaVar(temp, "bool", true);
+				adicionaVar(temp, "float", true);
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, "bool", true);
 				ss << qtdTab() << temp << " = (float)" << endereco1 << ";\n";
@@ -636,7 +770,7 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 			}
 			else if(tipo1 == "float" && tipo2 == "int"){
 				string temp = "t" + to_string(tempVar);
-				adicionaVar(temp, "bool", true);
+				adicionaVar(temp, "float", true);
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, "bool", true);
 				ss << qtdTab() << temp << " = (float)" << endereco2 << ";\n";
@@ -658,7 +792,7 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 		if(tipo1 != tipo2){
 			if(tipo1 == "int" && tipo2 == "float"){
 				string temp = "t" + to_string(tempVar);
-				adicionaVar(temp, "bool", true);
+				adicionaVar(temp, "float", true);
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, "bool", true);
 				ss << qtdTab() << temp << " = (float)" << endereco1 << ";\n";
@@ -666,7 +800,7 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 			}
 			else if(tipo1 == "float" && tipo2 == "int"){
 				string temp = "t" + to_string(tempVar);
-				adicionaVar(temp, "bool", true);
+				adicionaVar(temp, "float", true);
 				string temp2 = "t" + to_string(tempVar);
 				adicionaVar(temp2, "bool", true);
 				ss << qtdTab() << temp << " = (float)" << endereco2 << ";\n";

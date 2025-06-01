@@ -21,12 +21,17 @@ ID {LETRA}({LETRA}|{DIGITO})*
 
 %%
 
-"main"      { return TK_MAIN;}
+"int main"      { return TK_MAIN;}
 "int"       { return TK_TIPO_INT;}
 "float"     { return TK_TIPO_FLOAT;}
 "char"      { return TK_TIPO_CHAR;}
 "bool"      { return TK_TIPO_BOOL;}
 "string"    { return TK_TIPO_STRING; }
+"if"        { return TK_IF; }
+"else"      { return TK_ELSE; }
+"while"     { return TK_WHILE; }
+"do"        { return TK_DO; }
+"for"       { return TK_FOR; }
 
 "true"      {
 	yylval.traducao = "true";
