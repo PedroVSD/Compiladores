@@ -117,8 +117,13 @@ BLOCO: { criarPilha(); } '{' COMANDOS '}' {
 	ss << qtdTab(-1) << "{\n";
 
 	// Declarações das variáveis
-	ss << fecharPilha().str();
-	ss << "\n";
+	string decls = "";
+	decls = fecharPilha().str();
+	ss << decls;
+
+	if(!decls.empty() && !$3.traducao.empty()) {
+		ss << "\n";
+	}
 
 	// Comandos dentro do bloco
     ss << $3.traducao;
@@ -198,119 +203,141 @@ ATRIB: TK_ID '=' EXPR {
 ;
 
 LOOP:
-	TK_WHILE '(' EXPR ')' BLOCO {
+	 { criarPilha(); } TK_WHILE '(' EXPR ')' BLOCO {
 		
 		//Verificações
-		if (buscarVariavel($3.label) == -1) {
-			yyerror("Variável '" + $3.label + "' não declarada no loop while.");
+		if (buscarVariavel($4.label) == -1) {
+			yyerror("Variável '" + $4.label + "' não declarada no loop while.");
 		}
-		if (pilha[buscarVariavel($3.label)][$3.label].tipo != "bool") {
+		if (pilha[buscarVariavel($4.label)][$4.label].tipo != "bool") {
 			yyerror("Condição do loop while deve ser do tipo booleano, mas é '" + pilha[buscarVariavel($3.label)][$3.label].tipo + "'.");
 		}
 
 		// Geração de código		
 		stringstream ss;
-		string temp = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria; // Endereço de memória da variável condicional
-
-
-		ss << $3.traducao; // Traduz a expressão condicional
+		string temp = pilha[buscarVariavel($4.label)][$4.label].endereco_memoria; // Endereço de memória da variável condicional
 
 		ss << "\n";
 
-		ss << qtdTab(-1) << "BeginWhile" << defgoto << ":\n";
+		ss << qtdTab(-1) << "{\n"; // Abre a pilha de variáveis para o loop
 
-		ss << qtdTab() << "if (!" << temp << ") goto EndWhile" << defgoto << ";\n";
+		ss << fecharPilha().str(); // Fecha a pilha de variáveis antes do loop
+
+		ss << $4.traducao; // Traduz a expressão condicional
 
 		ss << "\n";
 
-		ss << $5.traducao; // Traduz o bloco do loop
+		ss << qtdTab(1) << "BeginWhile" << defgoto << ":\n";
+
+		ss << qtdTab(1) << "if (!" << temp << ") goto EndWhile" << defgoto << ";\n";
+
+		ss << "\n";
+
+		ss << $6.traducao; // Traduz o bloco do loop
 
 		ss << "\n"; // Adiciona uma nova linha para melhor legibilidade
 
-		ss << $3.traducao; // Reavalia a condição do loop
+		ss << $4.traducao; // Reavalia a condição do loop
 
-		ss << qtdTab() << "goto BeginWhile" << defgoto << ";\n";
+		ss << qtdTab(1) << "goto BeginWhile" << defgoto << ";\n";
 
-		ss << qtdTab(-1) << "EndWhile" << defgoto << ":\n";
+		ss << qtdTab(1) << "EndWhile" << defgoto << ":\n";
+
+		ss << qtdTab() << "}\n"; // Fecha a pilha de variáveis do loop
+
 		defgoto++; // Incrementa o contador de blocos de loop
 		$$.traducao = ss.str();
 	}
-	| TK_DO BLOCO TK_WHILE '(' EXPR ')' ';' {
+	| { criarPilha(); } TK_DO BLOCO TK_WHILE '(' EXPR ')' ';' {
 
 		// Verificações
-		if (buscarVariavel($5.label) == -1) {
-			yyerror("Variável '" + $5.label + "' não declarada no loop do-while.");
+		if (buscarVariavel($6.label) == -1) {
+			yyerror("Variável '" + $6.label + "' não declarada no loop do-while.");
 		}
-		if (pilha[buscarVariavel($5.label)][$5.label].tipo != "bool") {
+		if (pilha[buscarVariavel($6.label)][$6.label].tipo != "bool") {
 			yyerror("Condição do loop do-while deve ser do tipo booleano, mas é '" + pilha[buscarVariavel($5.label)][$5.label].tipo + "'.");
 		}
 
 		// Geração de código
 		stringstream ss;
-		string temp = pilha[buscarVariavel($5.label)][$5.label].endereco_memoria; // Endereço de memória da variável condicional
+		string temp = pilha[buscarVariavel($6.label)][$6.label].endereco_memoria; // Endereço de memória da variável condicional
 
 		ss << "\n";
 
-		ss << qtdTab(-1) << "BeginDoWhile" << defgoto << ":\n";
+		ss << qtdTab(-1) << "{\n"; // Abre a pilha de variáveis para o loop
 
-		ss << $2.traducao; // Traduz o bloco do loop
+		ss << fecharPilha().str(); // Fecha a pilha de variáveis antes do loop
 
 		ss << "\n";
 
-		ss << $5.traducao; // Traduz a expressão condicional 
+		ss << qtdTab(1) << "BeginDoWhile" << defgoto << ":\n";
 
-		ss << qtdTab() << "if (!" << temp << ") goto BeginDoWhile" << defgoto << ";\n";
+		ss << $3.traducao; // Traduz o bloco do loop
 
+		ss << "\n";
+
+		ss << $6.traducao; // Traduz a expressão condicional 
+
+		ss << qtdTab(1) << "if (!" << temp << ") goto BeginDoWhile" << defgoto << ";\n";
+
+		ss << qtdTab() << "}\n"; // Fecha a pilha de variáveis do loop
+		
 		ss << "\n";
 		
 		defgoto++; // Incrementa o contador de blocos de loop
 		$$.traducao = ss.str();
 	}
-	| TK_FOR '(' DECLAR_VAR ';' EXPR ';' ATRIB ')' BLOCO {
+	| { criarPilha(); } TK_FOR '(' DECLAR_VAR ';' EXPR ';' ATRIB ')' BLOCO {
 
 		// Verificações
-		if($3.traducao.empty()) {
+		if($4.traducao.empty()) {
 			cout << "Erro: A variável de controle do loop Precisa ser inicializada.\n";
 			exit(1);
 		}
-		if (buscarVariavel($5.label) == -1) {
-			yyerror("Variável '" + $5.label + "' não declarada no loop for.");
+		if (buscarVariavel($6.label) == -1) {
+			yyerror("Variável '" + $6.label + "' não declarada no loop for.");
 		}
-		if (pilha[buscarVariavel($5.label)][$5.label].tipo != "bool") {
+		if (pilha[buscarVariavel($6.label)][$6.label].tipo != "bool") {
 			yyerror("Condição do loop for deve ser do tipo booleano, mas é '" + pilha[buscarVariavel($5.label)][$5.label].tipo + "'.");
 		}
-		if (buscarVariavel($7.label) == -1) {
+		if (buscarVariavel($8.label) == -1) {
 			yyerror("Variável '" + $7.label + "' não declarada no loop for.");
 		}
 
 
 		// Geração de código
 		stringstream ss;
-		string temp = pilha[buscarVariavel($5.label)][$5.label].endereco_memoria;
+		string temp = pilha[buscarVariavel($6.label)][$6.label].endereco_memoria;
 
 		ss << "\n";
 
-		ss << $3.traducao; // Traduz a expressão de inicialização
+		ss << qtdTab(-1) << "{\n"; // Abre a pilha de variáveis para o loop
+		ss << fecharPilha().str(); // Fecha a pilha de variáveis antes do loop
+		ss << "\n";
 
-		ss << qtdTab(-1) << "BeginFor" << defgoto << ":\n";
+		ss << $4.traducao; // Traduz a expressão de inicialização
 
-		ss << $5.traducao; // Traduz a expressão condicional
+		ss << qtdTab(1) << "BeginFor" << defgoto << ":\n";
+
+		ss << $6.traducao; // Traduz a expressão condicional
 
 		ss << "\n";
 
-		ss << qtdTab() << "if (!" << temp << ") goto EndFor" << defgoto << ";\n";
+		ss << qtdTab(1) << "if (!" << temp << ") goto EndFor" << defgoto << ";\n";
 
 		ss << "\n";
 
-		ss << $9.traducao; // Traduz o bloco do loop
+		ss << $10.traducao; // Traduz o bloco do loop
 
-		ss << "\n";
+		ss << "\n"; // Adiciona uma nova linha para melhor legibilidade
 
-		ss << $7.traducao; // Traduz a expressão de iteração
+		ss << $8.traducao; // Traduz a expressão de iteração
 
-		ss << qtdTab() << "goto BeginFor" << defgoto << ";\n";
+		ss << qtdTab(1) << "goto BeginFor" << defgoto << ";\n";
 
-		ss << qtdTab(-1) << "EndFor" << defgoto << ":\n";
+		ss << qtdTab(1) << "EndFor" << defgoto << ":\n";
+
+		ss << qtdTab() << "}\n"; // Fecha a pilha de variáveis do loop
 		
 		defgoto++; // Incrementa o contador de blocos de loop
 		$$.traducao = ss.str();
@@ -523,6 +550,7 @@ EXPR_NOT:
 		$$.traducao = $1.traducao;
 	}
 ;
+
 EXPR_ATOM:
     '(' EXPR ')'  %prec '(' {
         $$.label = $2.label;
@@ -870,6 +898,7 @@ int buscarVariavel(string nome){
 	}
 	return -1;
 }
+
 string qtdTab(int dif){
 	string tab = "";
 	for(int i = 1; i < (defbloco + dif); i++){
