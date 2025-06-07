@@ -33,6 +33,8 @@ ID {LETRA}({LETRA}|{DIGITO})*
 "while"     { return TK_WHILE; }
 "do"        { return TK_DO; }
 "for"       { return TK_FOR; }
+"break"     { return TK_BREAK; }    
+"continue"  { return TK_CONTINUE; }
 
 "true"      {
 	yylval.traducao = "true";

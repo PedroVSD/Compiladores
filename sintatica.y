@@ -5,6 +5,7 @@
 #include <set>
 #include <map>
 #include <vector>
+#include <stack>
 
 
 #define YYSTYPE atributos
@@ -28,6 +29,9 @@ int defgoto = 0;
 int tempElse = 0;
 string moduloAtual;
 
+// Flag para gerar a função de tamanho de string
+bool precisa_get_length = false;
+
 struct atributos {
 	string label;
 	string traducao;
@@ -39,6 +43,13 @@ struct tabela{
 	string endereco_memoria;
 	bool temporaria;
 };
+
+struct RótulosDeLaço {
+    string rótuloBreak;    // Rótulo para onde 'break' deve pular (fim do laço)
+    string rótuloContinue; // Rótulo para onde 'continue' deve pular (próxima iteração)
+};
+
+stack<RótulosDeLaço> pilhaDeRótulosDeLaços;
 
 // Tabela de símbolos
 typedef map<string, tabela> tabela_simbolos;
@@ -66,6 +77,7 @@ void yyerror(string);
 %token TK_CHAR TK_BOOL_TRUE TK_BOOL_FALSE
 %token TK_TIPO_STRING TK_STRING_LITERAL
 %token TK_IF TK_ELSE TK_ELSE_IF TK_WHILE TK_FOR TK_DO
+%token TK_BREAK TK_CONTINUE
 
 
 %start S
@@ -84,13 +96,37 @@ void yyerror(string);
 %%
 
 S:
-	INICIO
-	{
-		cout << "/*Compilador DHP*/\n";
-		cout << "\n#include<string.h>\n#include<stdio.h>\n";
-		cout << fecharPilha().str();		
-		cout << $1.traducao;
-	}
+    INICIO
+    {
+        cout << "/*Compilador DHP*/\n";
+        cout << "\n#include<stdio.h>\n#include<string.h>\n#include<stdlib.h>\n";
+
+        // Gera a função auxiliar para calcular tamanho da string, se necessário
+        if (precisa_get_length) {
+            cout << "\n/**\n";
+            cout << " * Funcao auxiliar gerada pelo compilador DHP para calcular o tamanho de uma string\n";
+            cout << " * usando if/goto em vez de um laco 'while' nativo ou strlen.\n";
+            cout << " */\n";
+            cout << "int get_string_length(const char* str) {\n";
+            cout << "    int len = 0;\n";
+            cout << "    if (str == NULL) {\n";
+            cout << "        return 0;\n";
+            cout << "    }\n";
+            cout << "loop_start_len:\n";
+            cout << "    if (str[len] == '\\0') {\n";
+            cout << "        goto loop_end_len;\n";
+            cout << "    }\n";
+            cout << "    len++;\n";
+            cout << "    goto loop_start_len;\n";
+            cout << "loop_end_len:\n";
+            cout << "    return len;\n";
+            cout << "}\n\n";
+        }
+        
+        // Imprime o restante do código
+        cout << fecharPilha().str();        
+        cout << $1.traducao;
+    }
 ;
 INICIO:
 	DECLARACAO MAIN
@@ -156,6 +192,24 @@ COMANDO:
 	| BLOCO 		{ $$.traducao = $1.traducao; }
 	| LOOP          { $$.traducao = $1.traducao; }
 	| { criarPilha(); } COND_IF 		{ $$.traducao = $2.traducao; }
+	| TK_BREAK ';' {
+        if (pilhaDeRótulosDeLaços.empty()) {
+            yyerror("'break' fora de um laco");
+        }
+        stringstream ss;
+        // Pula para o rótulo de 'break' do laço mais interno (o que está no topo da pilha)
+        ss << qtdTab() << "goto " << pilhaDeRótulosDeLaços.top().rótuloBreak << ";\n";
+        $$.traducao = ss.str();
+    }
+    | TK_CONTINUE ';' {
+        if (pilhaDeRótulosDeLaços.empty()) {
+            yyerror("'continue' fora de um laco");
+        }
+        stringstream ss;
+        // Pula para o rótulo de 'continue' do laço mais interno
+        ss << qtdTab() << "goto " << pilhaDeRótulosDeLaços.top().rótuloContinue << ";\n";
+        $$.traducao = ss.str();
+    }
 ;
 
 DECLARACAO:
@@ -208,51 +262,29 @@ ATRIB: TK_ID '=' EXPR {
 ;
 
 LOOP:
-	 { criarPilha(); } TK_WHILE '(' EXPR ')' BLOCO {
-		
-		//Verificações
-		if (buscarVariavel($4.label) == -1) {
-			yyerror("Variável '" + $4.label + "' não declarada no loop while.");
-		}
-		if (pilha[buscarVariavel($4.label)][$4.label].tipo != "bool") {
-			yyerror("Condição do loop while deve ser do tipo booleano, mas é '" + pilha[buscarVariavel($3.label)][$3.label].tipo + "'.");
-		}
+	 WHILE_INICIO '(' EXPR ')' BLOCO {
+        // Ação final do while
+        
+        // $1 é WHILE_INICIO e contém os rótulos
+        string inícioDoLaço = $1.label;
+        string fimDoLaço = $1.traducao;
+        // $3 é EXPR, a condição
+        string temp_cond = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria;
 
-		// Geração de código		
-		stringstream ss;
-		string temp = pilha[buscarVariavel($4.label)][$4.label].endereco_memoria; // Endereço de memória da variável condicional
+        stringstream ss;
+        ss << "\n" << qtdTab() << inícioDoLaço << ":\n"; // Rótulo do CONTINUE
+        ss << $3.traducao; // Código da expressão condicional
+        ss << qtdTab(1) << "if (!" << temp_cond << ") goto " << fimDoLaço << ";\n";
+        ss << $5.traducao; // Código do bloco do laço ($5 é BLOCO)
+        ss << qtdTab(1) << "goto " << inícioDoLaço << ";\n";
+        ss << qtdTab() << fimDoLaço << ":;\n"; // Rótulo do BREAK
 
-		ss << "\n";
+        $$.traducao = ss.str();
 
-		ss << qtdTab(-1) << "{\n"; // Abre a pilha de variáveis para o loop
-
-		ss << fecharPilha().str(); // Fecha a pilha de variáveis antes do loop
-
-		ss << $4.traducao; // Traduz a expressão condicional
-
-		ss << "\n";
-
-		ss << qtdTab(1) << "BeginWhile" << defgoto << ":\n";
-
-		ss << qtdTab(1) << "if (!" << temp << ") goto EndWhile" << defgoto << ";\n";
-
-		ss << "\n";
-
-		ss << $6.traducao; // Traduz o bloco do loop
-
-		ss << "\n"; // Adiciona uma nova linha para melhor legibilidade
-
-		ss << $4.traducao; // Reavalia a condição do loop
-
-		ss << qtdTab(1) << "goto BeginWhile" << defgoto << ";\n";
-
-		ss << qtdTab(1) << "EndWhile" << defgoto << ":\n";
-
-		ss << qtdTab() << "}\n"; // Fecha a pilha de variáveis do loop
-
-		defgoto++; // Incrementa o contador de blocos de loop
-		$$.traducao = ss.str();
-	}
+        if (!pilhaDeRótulosDeLaços.empty()) {
+            pilhaDeRótulosDeLaços.pop();
+        }
+    }
 	| { criarPilha(); } TK_DO BLOCO TK_WHILE '(' EXPR ')' ';' {
 
 		// Verificações
@@ -292,62 +324,87 @@ LOOP:
 		defgoto++; // Incrementa o contador de blocos de loop
 		$$.traducao = ss.str();
 	}
-	| { criarPilha(); } TK_FOR '(' DECLAR_VAR ';' EXPR ';' ATRIB ')' BLOCO {
+	| { criarPilha(); } // Ação $1: Cria o escopo para as variáveis do for
+  TK_FOR '(' DECLAR_VAR ';' EXPR ';' ATRIB ')' // Símbolos de $2 a $9
+  { 
+    // Ação no meio da regra ($10): Executada ANTES do BLOCO
+    
+    // 1. Gerar nomes únicos para os rótulos deste laço
+    string rótuloTeste    = "ForTest_" + to_string(defgoto);
+    string rótuloIteração = "ForStep_" + to_string(defgoto); // Alvo do 'continue'
+    string rótuloFim      = "ForEnd_"  + to_string(defgoto); // Alvo do 'break'
+    
+    // 2. Empilhar os rótulos para que 'break' e 'continue' dentro do BLOCO os encontrem
+    pilhaDeRótulosDeLaços.push({rótuloFim, rótuloIteração});
 
-		// Verificações
-		if($4.traducao.empty()) {
-			cout << "Erro: A variável de controle do loop Precisa ser inicializada.\n";
-			exit(1);
-		}
-		if (buscarVariavel($6.label) == -1) {
-			yyerror("Variável '" + $6.label + "' não declarada no loop for.");
-		}
-		if (pilha[buscarVariavel($6.label)][$6.label].tipo != "bool") {
-			yyerror("Condição do loop for deve ser do tipo booleano, mas é '" + pilha[buscarVariavel($5.label)][$5.label].tipo + "'.");
-		}
-		if (buscarVariavel($8.label) == -1) {
-			yyerror("Variável '" + $7.label + "' não declarada no loop for.");
-		}
+    // 3. Passar os nomes dos rótulos para a ação final.
+    //    Usaremos uma string delimitada por '|' para passar múltiplos valores.
+    $$.label = rótuloTeste + "|" + rótuloIteração + "|" + rótuloFim;
+    
+    // Incrementa o contador de goto para o próximo laço/if ser único
+    defgoto++;
+  }
+  BLOCO // Símbolo $11
+  {
+    // Ação Final: Executada após o BLOCO ser analisado.
+    
+    // 1. Desempilhar os rótulos, pois saímos do escopo deste laço
+    if (!pilhaDeRótulosDeLaços.empty()) {
+        pilhaDeRótulosDeLaços.pop();
+    }
 
+    // 2. Recuperar os nomes dos rótulos passados pela ação do meio ($10)
+    string labels_str = $10.label;
+    stringstream ss_labels(labels_str);
+    string rótuloTeste, rótuloIteração, rótuloFim;
+    getline(ss_labels, rótuloTeste, '|');
+    getline(ss_labels, rótuloIteração, '|');
+    getline(ss_labels, rótuloFim, '|');
 
-		// Geração de código
-		stringstream ss;
-		string temp = pilha[buscarVariavel($6.label)][$6.label].endereco_memoria;
+    // 3. Obter o nome da variável C da condição
+    string temp_cond = pilha[buscarVariavel($6.label)][$6.label].endereco_memoria;
 
-		ss << "\n";
+    // 4. Gerar o código C final na ordem correta
+    stringstream ss;
+    ss << "\n" << qtdTab(-1) << "{\n"; // Abre o escopo C do for
+    ss << fecharPilha().str();         // Imprime as declarações de variáveis do escopo do for
+    ss << "\n";
+    ss << $4.traducao;                 // Código da inicialização (ex: int i = 0;)
+    ss << qtdTab(1) << "goto " << rótuloTeste << ";\n\n";
 
-		ss << qtdTab(-1) << "{\n"; // Abre a pilha de variáveis para o loop
-		ss << fecharPilha().str(); // Fecha a pilha de variáveis antes do loop
-		ss << "\n";
+    ss << qtdTab(1) << rótuloIteração << ":\n"; // Rótulo para o 'continue'
+    ss << $8.traducao;                          // Código da iteração (ex: i++;)
+    ss << "\n";
 
-		ss << $4.traducao; // Traduz a expressão de inicialização
+    ss << qtdTab(1) << rótuloTeste << ":\n";   // Rótulo para o teste da condição
+    ss << $6.traducao;                         // Código da condição (ex: i < 10)
+    ss << qtdTab(1) << "if (!" << temp_cond << ") goto " << rótuloFim << ";\n\n";
 
-		ss << qtdTab(1) << "BeginFor" << defgoto << ":\n";
+    ss << $11.traducao;                        // Código do corpo do laço (BLOCO)
+    ss << "\n";
+    
+    ss << qtdTab(1) << "goto " << rótuloIteração << ";\n"; // Volta para o passo de iteração
+    
+    ss << qtdTab(1) << rótuloFim << ":;\n";     // Rótulo para o 'break'
+    ss << qtdTab() << "}\n";                   // Fecha o escopo C do for
 
-		ss << $6.traducao; // Traduz a expressão condicional
-
-		ss << "\n";
-
-		ss << qtdTab(1) << "if (!" << temp << ") goto EndFor" << defgoto << ";\n";
-
-		ss << "\n";
-
-		ss << $10.traducao; // Traduz o bloco do loop
-
-		ss << "\n"; // Adiciona uma nova linha para melhor legibilidade
-
-		ss << $8.traducao; // Traduz a expressão de iteração
-
-		ss << qtdTab(1) << "goto BeginFor" << defgoto << ";\n";
-
-		ss << qtdTab(1) << "EndFor" << defgoto << ":\n";
-
-		ss << qtdTab() << "}\n"; // Fecha a pilha de variáveis do loop
-		
-		defgoto++; // Incrementa o contador de blocos de loop
-		$$.traducao = ss.str();
-	}
+    $$.traducao = ss.str();
+  }
 ;
+
+WHILE_INICIO:
+    { criarPilha(); } TK_WHILE {
+        string inícioDoLaço = "BeginWhile" + to_string(defgoto);
+        string fimDoLaço   = "EndWhile" + to_string(defgoto);
+        defgoto++;
+
+        pilhaDeRótulosDeLaços.push({fimDoLaço, inícioDoLaço});
+        
+        $$.label = inícioDoLaço;    // Passa o rótulo de início para a regra LOOP
+        $$.traducao = fimDoLaço;  // Passa o rótulo de fim
+    }
+;
+
 COND_IF:
 	 TK_IF '(' EXPR ')' BLOCO COND_ELSE %prec LOWER_THAN_ELSE {
 
@@ -489,11 +546,9 @@ EXPR:
 ;
 EXPR_ARIT:
 	EXPR_ARIT '+' EXPR_TERM %prec '+' {
-        // Buscar informações dos operandos da tabela de símbolos (usando buscarVariavel)
         int idx_op1 = buscarVariavel($1.label);
         int idx_op2 = buscarVariavel($3.label);
-
-        // Adicione checagens de erro se idx_op1 ou idx_op2 for -1
+        if (idx_op1 == -1 || idx_op2 == -1) { yyerror("Variavel de operacao nao encontrada na tabela de simbolos."); }
 
         string tipo1 = pilha[idx_op1][$1.label].tipo;
         string tipo2 = pilha[idx_op2][$3.label].tipo;
@@ -503,9 +558,10 @@ EXPR_ARIT:
         stringstream ss_op_code;
 
         if (tipo1 == "string" && tipo2 == "string") {
-            // LÓGICA DE CONCATENAÇÃO INLINE (como no exemplo C que você aprovou)
+            // --- INÍCIO DA LÓGICA DE CONCATENAÇÃO DE STRINGS ---
+            precisa_get_length = true; // Seta a flag para gerar a função get_string_length
 
-            // 1. Criar chaves para temporárias de tamanho e resultado, e adicioná-las
+            // 1. Criar chaves para temporárias e adicioná-las à tabela
             string chave_len1 = "t_len_" + to_string(tempVar);
             adicionaVar(chave_len1, "int", true);
             string c_nome_len1 = pilha[pilha.size()-1][chave_len1].endereco_memoria;
@@ -518,60 +574,35 @@ EXPR_ARIT:
             adicionaVar(chave_res_str, "string", true);
             string c_nome_res_str = pilha[pilha.size()-1][chave_res_str].endereco_memoria;
 
-            // 2. Gerar código C para calcular tamanho de op1_c_name -> c_nome_len1
-            ss_op_code << qtdTab() << c_nome_len1 << " = 0;\n";
-            ss_op_code << qtdTab() << "if (" << op1_c_name << " != NULL) {\n";
-            ss_op_code << qtdTab(1) << "while (" << op1_c_name << "[" << c_nome_len1 << "] != '\\0') {\n";
-            ss_op_code << qtdTab(2) << c_nome_len1 << "++;\n";
-            ss_op_code << qtdTab(1) << "}\n";
-            ss_op_code << qtdTab() << "}\n";
+            // 2. Gerar código para calcular tamanhos chamando a função auxiliar
+            ss_op_code << qtdTab() << c_nome_len1 << " = get_string_length(" << op1_c_name << ");\n";
+            ss_op_code << qtdTab() << c_nome_len2 << " = get_string_length(" << op2_c_name << ");\n";
 
-            // 3. Gerar código C para calcular tamanho de op2_c_name -> c_nome_len2
-            ss_op_code << qtdTab() << c_nome_len2 << " = 0;\n";
-            ss_op_code << qtdTab() << "if (" << op2_c_name << " != NULL) {\n";
-            ss_op_code << qtdTab(1) << "while (" << op2_c_name << "[" << c_nome_len2 << "] != '\\0') {\n";
-            ss_op_code << qtdTab(2) << c_nome_len2 << "++;\n";
-            ss_op_code << qtdTab(1) << "}\n";
-            ss_op_code << qtdTab() << "}\n";
-
-            // 4. Gerar código C para alocar memória (malloc) -> c_nome_res_str
+            // 3. Gerar código para alocar memória (malloc)
             ss_op_code << qtdTab() << c_nome_res_str << " = (char*)malloc("
                        << c_nome_len1 << " + " << c_nome_len2 << " + 1);\n";
-            ss_op_code << qtdTab() << "if (" << c_nome_res_str << " == NULL) {\n";
-            ss_op_code << qtdTab(1) << "fprintf(stderr, \"Erro critico: Falha na alocacao de memoria para string concatenada.\\n\");\n";
-            ss_op_code << qtdTab(1) << "exit(1);\n";
-            ss_op_code << qtdTab() << "}\n";
+            ss_op_code << qtdTab() << "if (" << c_nome_res_str << " == NULL) { fprintf(stderr, \"Falha na alocacao de memoria.\\n\"); exit(1); }\n";
 
-            // 5. Gerar código C para copiar op1_c_name para c_nome_res_str (strcpy)
-            ss_op_code << qtdTab() << "if (" << op1_c_name << " != NULL) {\n";
-            ss_op_code << qtdTab(1) << "strcpy(" << c_nome_res_str << ", " << op1_c_name << ");\n";
-            ss_op_code << qtdTab() << "} else {\n";
-            ss_op_code << qtdTab(1) << c_nome_res_str << "[0] = '\\0';\n";
-            ss_op_code << qtdTab() << "}\n";
-
-            // 6. Gerar código C para concatenar op2_c_name a c_nome_res_str (strcat)
-            ss_op_code << qtdTab() << "if (" << op2_c_name << " != NULL) {\n";
-            ss_op_code << qtdTab(1) << "strcat(" << c_nome_res_str << ", " << op2_c_name << ");\n";
-            ss_op_code << qtdTab() << "}\n";
+            // 4. Gerar código para copiar e concatenar
+            ss_op_code << qtdTab() << "if (" << op1_c_name << " != NULL) { strcpy(" << c_nome_res_str << ", " << op1_c_name << "); } else { " << c_nome_res_str << "[0] = '\\0'; }\n";
+            ss_op_code << qtdTab() << "if (" << op2_c_name << " != NULL) { strcat(" << c_nome_res_str << ", " << op2_c_name << "); }\n";
 
             $$.label = chave_res_str; 
             $$.traducao = $1.traducao + $3.traducao + ss_op_code.str();
 
-        } else if ( (tipo1 == "string" && tipo2 != "string") || (tipo1 != "string" && tipo2 == "string") ) {
-            yyerror("Concatenacao de string com tipo incompativel (" + tipo1 + ", " + tipo2 + ")");
-        } else { // Caso numérico: chamar veririficarTipo
-            // Note que veririficarTipo retorna stringstream, não string diretamente.
-            // E $$.label precisa ser "t" + to_string(tempVar-1) se veririficarTipo cria a temp.
+        } else if ( (tipo1 == "string" || tipo2 == "string") ) {
+            yyerror("Operador '+' com tipos incompativeis para string (" + tipo1 + ", " + tipo2 + ")");
+        } else { // Caso numérico: delega para a função veririficarTipo
             stringstream resultado_verificacao;
             resultado_verificacao = veririficarTipo($1.label, "+", $3.label);
-            $$.label = "t" + to_string(tempVar-1); // Assume que veririficarTipo criou uma temp e incrementou tempVar
+            $$.label = "t" + to_string(tempVar-1);
             $$.traducao = $1.traducao + $3.traducao + resultado_verificacao.str();
         }
     }
     | EXPR_ARIT '-' EXPR_TERM %prec '-' {
-        // Chamar veririficarTipo aqui, mas antes verificar se algum é string
         int idx_op1 = buscarVariavel($1.label);
         int idx_op2 = buscarVariavel($3.label);
+        if (idx_op1 == -1 || idx_op2 == -1) { yyerror("Variavel de operacao nao encontrada."); }
         string tipo1 = pilha[idx_op1][$1.label].tipo;
         string tipo2 = pilha[idx_op2][$3.label].tipo;
 
@@ -584,10 +615,42 @@ EXPR_ARIT:
             $$.traducao = $1.traducao + $3.traducao + resultado_verificacao.str();
         }
     }
-	| EXPR_TERM {
-		$$. label = $1.label;
-		$$.traducao = $1.traducao;
-	}
+    | EXPR_ARIT '*' EXPR_TERM %prec '*' {
+        int idx_op1 = buscarVariavel($1.label);
+        int idx_op2 = buscarVariavel($3.label);
+        if (idx_op1 == -1 || idx_op2 == -1) { yyerror("Variavel de operacao nao encontrada."); }
+        string tipo1 = pilha[idx_op1][$1.label].tipo;
+        string tipo2 = pilha[idx_op2][$3.label].tipo;
+
+        if (tipo1 == "string" || tipo2 == "string") {
+            yyerror("Operador '*' nao aplicavel a strings");
+        } else {
+            stringstream resultado_verificacao;
+            resultado_verificacao = veririficarTipo($1.label, "*", $3.label);
+            $$.label = "t" + to_string(tempVar-1);
+            $$.traducao = $1.traducao + $3.traducao + resultado_verificacao.str();
+        }
+    }
+    | EXPR_ARIT '/' EXPR_TERM %prec '/' {
+        int idx_op1 = buscarVariavel($1.label);
+        int idx_op2 = buscarVariavel($3.label);
+        if (idx_op1 == -1 || idx_op2 == -1) { yyerror("Variavel de operacao nao encontrada."); }
+        string tipo1 = pilha[idx_op1][$1.label].tipo;
+        string tipo2 = pilha[idx_op2][$3.label].tipo;
+
+        if (tipo1 == "string" || tipo2 == "string") {
+            yyerror("Operador '/' nao aplicavel a strings");
+        } else {
+            stringstream resultado_verificacao;
+            resultado_verificacao = veririficarTipo($1.label, "/", $3.label);
+            $$.label = "t" + to_string(tempVar-1);
+            $$.traducao = $1.traducao + $3.traducao + resultado_verificacao.str();
+        }
+    }
+    | EXPR_TERM {
+        $$.label = $1.label;
+        $$.traducao = $1.traducao;
+    }
 ;
 EXPR_TERM:
 		EXPR_TERM '*' EXPR_ATOM %prec '*' {
