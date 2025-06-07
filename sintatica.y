@@ -15,7 +15,7 @@ using namespace std;
 // Declaração de funções
 void adicionaVar(string nome, string tipo, bool temp = false);
 stringstream veririficarTipo(string var1, string operador, string var2 = "");
-void criarPilha();
+void criarPilha(string nome = "");
 stringstream fecharPilha();
 int buscarVariavel(string nome);
 string qtdTab(int dif = 0);
@@ -25,6 +25,8 @@ int tempVar = 0;
 int defVar = 0;
 int defbloco = 0;
 int defgoto = 0;
+int tempElse = 0;
+string moduloAtual;
 
 struct atributos {
 	string label;
@@ -63,7 +65,7 @@ void yyerror(string);
 %token TK_AND TK_OR
 %token TK_CHAR TK_BOOL_TRUE TK_BOOL_FALSE
 %token TK_TIPO_STRING TK_STRING_LITERAL
-%token TK_IF TK_ELSE TK_WHILE TK_FOR TK_DO
+%token TK_IF TK_ELSE TK_ELSE_IF TK_WHILE TK_FOR TK_DO
 
 
 %start S
@@ -76,6 +78,8 @@ void yyerror(string);
 %left '*' '/'
 %right UMINUS '!'
 %nonassoc '(' ')'
+%nonassoc LOWER_THAN_ELSE
+%nonassoc TK_ELSE
 
 %%
 
@@ -151,6 +155,7 @@ COMANDO:
 	| EXPR ';'      { $$.traducao = $1.traducao; }
 	| BLOCO 		{ $$.traducao = $1.traducao; }
 	| LOOP          { $$.traducao = $1.traducao; }
+	| { criarPilha(); } COND_IF 		{ $$.traducao = $2.traducao; }
 ;
 
 DECLARACAO:
@@ -341,6 +346,138 @@ LOOP:
 		
 		defgoto++; // Incrementa o contador de blocos de loop
 		$$.traducao = ss.str();
+	}
+;
+COND_IF:
+	 TK_IF '(' EXPR ')' BLOCO COND_ELSE %prec LOWER_THAN_ELSE {
+
+		// Verificações
+		if (buscarVariavel($3.label) == -1) {
+			yyerror("Variável '" + $3.label + "' não declarada na condição do if.");
+		}
+		if (pilha[buscarVariavel($3.label)][$3.label].tipo != "bool") {
+			yyerror("Condição do if deve ser do tipo booleano, mas é '" + pilha[buscarVariavel($3.label)][$3.label].tipo + "'.");
+		}
+
+		// Geração de código
+		stringstream ss;
+		string temp = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria; // Endereço de memória da variável condicional
+
+		ss << "\n";
+
+		ss << qtdTab(-1) << "{\n"; // Abre a pilha de variáveis para o if
+
+		ss << fecharPilha().str(); // Fecha a pilha de variáveis antes do if
+
+		ss << "\n";
+
+		ss << $3.traducao; // Traduz a expressão condicional
+
+		ss << qtdTab(1) << "if (!" << temp << ") goto EndIf" << defgoto << ";\n";
+
+		ss << $5.traducao; // Traduz o bloco do if
+
+		if (!$6.traducao.empty()) {
+			ss << qtdTab(1) << "goto EndElse" << defgoto << ";\n"; // Se não houver else-if, pula para o final
+		} 
+
+		ss << qtdTab(1) << "EndIf" << defgoto << ":\n";
+
+		ss << "\n";
+
+		ss << $6.traducao; // Traduz o bloco do else-if, se houver
+		
+		if (!$6.traducao.empty()) {
+			ss << qtdTab(1) << "EndElse" << defgoto << ":\n"; // Marca o final do if/else
+		}
+
+		ss << qtdTab() << "}\n"; // Fecha a pilha de variáveis do if
+		tempElse = 0; // Reseta o contador de else-if
+		defgoto++; // Incrementa o contador de blocos de if/else
+
+		$$.traducao = ss.str();
+	}
+	| TK_IF '(' EXPR ')' BLOCO COND_ELSE TK_ELSE BLOCO %prec TK_ELSE {
+
+		// Verificações
+		if (buscarVariavel($3.label) == -1) {
+			yyerror("Variável '" + $3.label + "' não declarada na condição do if.");
+		}
+		if (pilha[buscarVariavel($3.label)][$3.label].tipo != "bool") {
+			yyerror("Condição do if deve ser do tipo booleano, mas é '" + pilha[buscarVariavel($3.label)][$3.label].tipo + "'.");
+		}
+
+		// Geração de código
+		stringstream ss;
+		string temp = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria; // Endereço de memória da variável condicional
+
+		ss << "\n";
+
+		ss << qtdTab(-1) << "{\n"; // Abre a pilha de variáveis para o if
+
+		ss << fecharPilha().str(); // Fecha a pilha de variáveis antes do if
+		
+		ss << "\n";
+
+		ss << $3.traducao; // Traduz a expressão condicional
+
+		ss << qtdTab(1) << "if (!" << temp << ") goto EndIf" << defgoto << ";\n";
+
+		ss << $5.traducao; // Traduz o bloco do if
+		
+		ss << qtdTab(1) << "goto EndElse" << defgoto << ";\n";
+
+		ss << qtdTab(1) << "EndIf" << defgoto << ":\n";
+
+		ss << $6.traducao; // Traduz o bloco do else-if, se houver
+
+		ss << $8.traducao; // Traduz o bloco do else
+
+		if (!$8.traducao.empty()) {
+			ss << qtdTab(1) << "EndElse" << defgoto << ":\n"; // Se houver else, pula para o final
+		}
+
+		ss << qtdTab() << "}\n"; // Fecha a pilha de variáveis do if/else
+
+		tempElse = 0; // Reseta o contador de else-if
+		defgoto++; // Incrementa o contador de blocos de if/else
+
+		$$.traducao = ss.str();
+	} 
+;
+COND_ELSE:
+	TK_ELSE_IF '(' EXPR ')' BLOCO COND_ELSE %prec LOWER_THAN_ELSE {
+		
+		// Verificações
+		if (buscarVariavel($3.label) == -1) {
+			yyerror("Variável '" + $3.label + "' não declarada na condição do else-if.");
+		}
+		if (pilha[buscarVariavel($3.label)][$3.label].tipo != "bool") {
+			yyerror("Condição do else-if deve ser do tipo booleano, mas é '" + pilha[buscarVariavel($3.label)][$3.label].tipo + "'.");
+		}
+
+		// Geração de código
+
+		stringstream ss;
+		string temp = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria; // Endereço de memória da variável condicional
+
+		ss << "\n";
+
+		ss << $3.traducao; // Traduz a expressão condicional do else-if
+
+		ss << qtdTab() << "if (!" << temp << ") goto EndElseIf" << tempElse << ";\n";
+
+		ss << $5.traducao; // Traduz o bloco do else-if
+
+		ss << qtdTab() << "goto EndElse" << defgoto << ";\n";
+
+		ss << qtdTab() << "EndElseIf" << tempElse++ << ":\n";
+
+		$$.traducao = ss.str() + $6.traducao; // Combina com a tradução do bloco do else-if
+	}
+	| 
+	{
+		$$.traducao = "";
 	}
 ;
 
@@ -856,7 +993,13 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 	return ss;
 }
 
-void criarPilha(){
+void criarPilha(string nome){
+	if(nome.empty()){
+		moduloAtual = nome;
+	}
+	else{
+		moduloAtual = nome;
+	}
 	defbloco++;
 	pilha.push_back(tabela_simbolos());
 }
