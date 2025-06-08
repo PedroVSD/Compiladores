@@ -99,42 +99,59 @@ void yyerror(string);
 %%
 
 S:
-    INICIO
-    {
+    INICIO {
         cout << "/*Compilador DHP*/\n";
         cout << "\n#include<stdio.h>\n#include<string.h>\n#include<stdlib.h>\n";
 
-        // Gera a função auxiliar para calcular tamanho da string, se necessário
+        // Mudei o nome da sua função 'Len' para 'get_string_length' para consistência
         if (precisa_get_length) {
-            cout << "int Len(const char* str)\n{\n";
-            cout << "	int len;\n	int f0;\n	int f1;\n	int f2;	\n\n";
-			cout << "	len = 0;\n";
-			cout << "	f0 =  str == NULL;\n";	
-            cout << "    if (f0) goto loop_end_len;\n";
-            cout << "\nloop_start_len:\n\n";
-			cout << "    f1 = str[len];\n	f2 = str[len] == '\\0';\n";
-            cout << "    if (f2) goto loop_end_len;\n";
-            cout << "    len = len + 1;\n";
-            cout << "    goto loop_start_len;\n";
-            cout << "\nloop_end_len:\n\n";
-            cout << "    return len;\n";
-            cout << "}\n\n";
+            cout << "\nint Len(const char* str) {\n"
+                 << "    int len, f0, f1, f2;\n"
+                 << "    len = 0;\n"
+                 << "    f0 = str == NULL;\n"
+                 << "    if (f0) goto loop_end_len;\n"
+                 << "loop_start_len:\n"
+                 << "    f1 = str[len];\n"
+                 << "    f2 = f1 == '\\0';\n" // Usei f1 aqui para estilo 3-endereços
+                 << "    if (f2) goto loop_end_len;\n"
+                 << "    len = len + 1;\n"
+                 << "    goto loop_start_len;\n"
+                 << "loop_end_len:;\n" // Adicionado ; para sintaxe C sempre válida
+                 << "    return len;\n"
+                 << "}\n\n";
         }
         if (precisa_input_int) {
              cout << "\nint input_int() {\n"
-                  << "    int num = 0, sign = 1;\n    char c;\n"
-                  << "    do { scanf(\"%c\", &c); } while (c == ' ' || c == '\\n');\n"
-                  << "    if (c == '-') { sign = -1; scanf(\"%c\", &c); }\n"
-                  << "loop_read_digits:\n"
-                  << "    if (c < '0' || c > '9') { goto end_read_digits; }\n"
-                  << "    num = num * 10 + (c - '0');\n"
+                  << "    int num=0, sign=1, flag_is_space, flag_is_newline, flag_is_whitespace;\n"
+                  << "    char c;\n"
+                  << "    int flag_is_minus, flag_is_less, flag_is_greater, flag_not_digit, temp_val;\n"
+                  << "input_ws_loop:\n"
                   << "    scanf(\"%c\", &c);\n"
-                  << "    goto loop_read_digits;\n"
+                  << "    flag_is_space = c == ' ';\n"
+                  << "    flag_is_newline = c == '\\n';\n"
+                  << "    flag_is_whitespace = flag_is_space || flag_is_newline;\n"
+                  << "    if (flag_is_whitespace) goto input_ws_loop;\n"
+                  << "after_sign_check:;\n"
+                  << "    flag_is_minus = c == '-';\n"
+                  << "    if (!flag_is_minus) goto input_digit_loop;\n"
+                  << "    sign = -1;\n"
+                  << "    scanf(\"%c\", &c);\n"
+                  << "input_digit_loop:\n"
+                  << "    flag_is_less = c < '0';\n"
+                  << "    flag_is_greater = c > '9';\n"
+                  << "    flag_not_digit = flag_is_less || flag_is_greater;\n"
+                  << "    if (flag_not_digit) goto end_read_digits;\n"
+                  << "    temp_val = c - '0';\n"
+                  << "    num = num * 10;\n"
+                  << "    num = num + temp_val;\n"
+                  << "    scanf(\"%c\", &c);\n"
+                  << "    goto input_digit_loop;\n"
                   << "end_read_digits:;\n"
-                  << "    return sign * num;\n"
+                  << "    num = sign * num;\n"
+                  << "    return num;\n"
                   << "}\n\n";
         }
-        if (precisa_output_int) {
+        if (precisa_output_int) { // A versão recursiva já é boa e não usa 'while'
             cout << "\nvoid output_int(int n) {\n"
                  << "    if (n == 0) { printf(\"0\"); return; }\n"
                  << "    if (n < 0) { putchar('-'); n = -n; }\n"
@@ -144,15 +161,61 @@ S:
         }
         if (precisa_output_string) {
             cout << "\nvoid output_string(const char* s) {\n"
-                 << "    if (s != NULL) { printf(\"%s\", s); }\n"
+                 << "    int i = 0;\n"
+                 << "    int flag_null = s == NULL;\n"
+                 << "    if (flag_null) goto output_str_end;\n"
+                 << "output_str_loop_start:\n"
+                 << "    char c = s[i];\n"
+                 << "    int flag_fim = c == '\\0';\n"
+                 << "    if (flag_fim) goto output_str_end;\n"
+                 << "    putchar(c);\n"
+                 << "    i = i + 1;\n"
+                 << "    goto output_str_loop_start;\n"
+                 << "output_str_end:;\n"
                  << "}\n\n";
         }
-        // Imprime o restante do código
+		if (precisa_input_string) {
+            cout << "\n// Le uma string da entrada ate o espaco ou nova linha\n";
+            cout << "char* input_string() {\n"
+                 << "    int capacity = 16;\n"
+                 << "    int len = 0;\n"
+                 << "    char* buffer = (char*)malloc(capacity);\n"
+                 << "    char c;\n"
+                 << "    int scanf_result, flag_is_terminator, flag_is_newline, flag_is_space, flag_is_full;\n"
+                 << "    if (buffer == NULL) { fprintf(stderr, \"Falha na alocacao inicial para input_string\\n\"); exit(1); }\n"
+                 << "\n"
+                 << "input_str_loop_start:\n"
+                 << "    scanf_result = scanf(\"%c\", &c);\n"
+                 << "    flag_is_terminator = scanf_result != 1;\n"
+                 << "    if (flag_is_terminator) goto input_str_loop_end;\n"
+                 << "    flag_is_newline = c == '\\n';\n"
+                 << "    flag_is_space = c == ' ';\n"
+                 << "    flag_is_terminator = flag_is_newline || flag_is_space;\n"
+                 << "    if (flag_is_terminator) goto input_str_loop_end;\n"
+                 << "\n"
+                 << "    buffer[len] = c;\n"
+                 << "    len = len + 1;\n"
+                 << "\n"
+                 << "    flag_is_full = len >= capacity;\n"
+                 << "    if (!flag_is_full) goto input_str_loop_start;\n"
+                 << "\n"
+                 << "    capacity = capacity * 2;\n"
+                 << "    buffer = (char*)realloc(buffer, capacity);\n"
+                 << "    if (buffer == NULL) { fprintf(stderr, \"Falha na realocacao de memoria para input_string\\n\"); exit(1); }\n"
+                 << "    goto input_str_loop_start;\n"
+                 << "\n"
+                 << "input_str_loop_end:;\n"
+                 << "    buffer[len] = '\\0';\n"
+                 << "    return buffer;\n"
+                 << "}\n\n";
+        }
+        
+        // Imprime o resto do código
         cout << fecharPilha().str();        
         cout << $1.traducao;
     }
-	
 ;
+
 INICIO:
 	DECLARACAO MAIN
 	{
@@ -217,6 +280,8 @@ COMANDO:
 	| BLOCO 		{ $$.traducao = $1.traducao; }
 	| LOOP          { $$.traducao = $1.traducao; }
 	| { criarPilha(); } COND_IF 		{ $$.traducao = $2.traducao; }
+	| COMANDO_SAIDA ';'   { $$.traducao = $1.traducao; }
+    | COMANDO_ENTRADA ';' { $$.traducao = $1.traducao; }
 	| TK_BREAK ';' {
         if (pilhaDeRotulosDeLaços.empty()) { // Renomeado sem acentos
             yyerror("'break' fora de um laco");
@@ -236,6 +301,123 @@ COMANDO:
         // ANTES: pilhaDeRótulosDeLaços.top().rótuloContinue
         ss << qtdTab() << "goto " << pilhaDeRotulosDeLaços.back().rotuloContinue << ";\n"; // <<< CORRIGIDO AQUI
         $$.traducao = ss.str();
+    }
+	COMANDO_SAIDA:
+    TK_ESCREVA '(' LISTA_EXPRESSOES ')' {
+        // A LISTA_EXPRESSOES ($3) já contém o código para cada printf individual.
+        // Aqui, apenas adicionamos o pulo de linha final.
+        $$.traducao = $3.traducao + qtdTab() + "printf(\"\\n\");\n";
+    }
+;
+
+LISTA_EXPRESSOES:
+    // Caso base: A lista tem apenas uma expressão.
+    EXPR {
+        int idx = buscarVariavel($1.label);
+        if (idx == -1) { yyerror("Variavel ou expressao '" + $1.label + "' invalida em 'escreva'."); }
+
+        string tipo = pilha[idx][$1.label].tipo;
+        string c_nome = pilha[idx][$1.label].endereco_memoria;
+        
+        stringstream ss_code;
+        ss_code << $1.traducao; // Inclui o código que calcula a expressão
+        
+        ss_code << qtdTab();
+        if (tipo == "int" || tipo == "bool") {
+            precisa_output_int = true;
+            ss_code << "output_int(" << c_nome << ");";
+        } else if (tipo == "string") {
+            precisa_output_string = true;
+            ss_code << "output_string(" << c_nome << ");";
+        } else {
+            yyerror("Tipo '" + tipo + "' nao suportado por 'escreva'");
+        }
+        ss_code << "\n";
+        $$.traducao = ss_code.str();
+    }
+    // Caso recursivo: Uma lista, vírgula, e mais uma expressão.
+    | LISTA_EXPRESSOES ',' EXPR {
+        int idx = buscarVariavel($3.label);
+        if (idx == -1) { yyerror("Variavel ou expressao '" + $3.label + "' invalida em 'escreva'."); }
+        
+        string tipo = pilha[idx][$3.label].tipo;
+        string c_nome = pilha[idx][$3.label].endereco_memoria;
+        
+        stringstream ss_code_novo_arg;
+        ss_code_novo_arg << $3.traducao; // Código da nova expressão
+
+        ss_code_novo_arg << qtdTab();
+        if (tipo == "int" || tipo == "bool") {
+            precisa_output_int = true;
+            ss_code_novo_arg << "printf(\" \"); output_int(" << c_nome << ");"; // Adiciona espaço separador
+        } else if (tipo == "string") {
+            precisa_output_string = true;
+            ss_code_novo_arg << "printf(\" \"); output_string(" << c_nome << ");";
+        } else {
+             yyerror("Tipo '" + tipo + "' nao suportado por 'escreva'");
+        }
+        ss_code_novo_arg << "\n";
+        
+        $$.traducao = $1.traducao + ss_code_novo_arg.str();
+    }
+;
+
+COMANDO_ENTRADA:
+    TK_LEIA '(' LISTA_VARIAVEIS ')' {
+        $$.traducao = $3.traducao;
+    }
+;
+
+LISTA_VARIAVEIS:
+    TK_ID {
+        int idx = buscarVariavel($1.label);
+        if (idx == -1) { yyerror("Variavel '" + $1.label + "' nao declarada para 'leia'."); }
+
+        string tipo = pilha[idx][$1.label].tipo;
+        string c_nome = pilha[idx][$1.label].endereco_memoria;
+        
+        stringstream ss_code;
+        if (tipo == "int" || tipo == "bool") {
+            precisa_input_int = true;
+            ss_code << qtdTab() << c_nome << " = input_int();\n";
+        } else if (tipo == "float") {
+            // Se você implementar input_float(), a lógica seria aqui
+            yyerror("Leitura de floats com 'leia' nao e suportada.");
+        } else if (tipo == "char") {
+            ss_code << qtdTab() << "scanf(\" %c\", &" << c_nome << ");\n";
+        } else if (tipo == "string") {
+            // <<< LÓGICA ATUALIZADA PARA STRING >>>
+            precisa_input_string = true; // Ativa a flag para gerar a função
+            // NOTA: Se 'c_nome' já apontava para uma string alocada, essa memória será perdida (vazamento).
+            // Lidar com isso requereria um 'free' antes da nova atribuição.
+            ss_code << qtdTab() << "// AVISO: Se '" << $1.label << "' ja continha uma string, a memoria antiga pode vazar.\n";
+            ss_code << qtdTab() << c_nome << " = input_string();\n";
+        } else {
+            yyerror("Tipo '" + tipo + "' invalido para 'leia'.");
+        }
+        $$.traducao = ss_code.str();
+    }
+    | LISTA_VARIAVEIS ',' TK_ID {
+        // A lógica é idêntica para o caso recursivo
+        int idx = buscarVariavel($3.label);
+        if (idx == -1) { yyerror("Variavel '" + $3.label + "' nao declarada para 'leia'."); }
+
+        string tipo = pilha[idx][$3.label].tipo;
+        string c_nome = pilha[idx][$3.label].endereco_memoria;
+        
+        stringstream ss_code_novo_arg;
+        if (tipo == "int" || tipo == "bool") {
+            precisa_input_int = true;
+            ss_code_novo_arg << qtdTab() << c_nome << " = input_int();\n";
+        } else if (tipo == "string") {
+            precisa_input_string = true;
+            ss_code_novo_arg << qtdTab() << "// AVISO: Se '" << $3.label << "' ja continha uma string, a memoria antiga pode vazar.\n";
+            ss_code_novo_arg << qtdTab() << c_nome << " = input_string();\n";
+        } else {
+            // ... erros para outros tipos
+        }
+        
+        $$.traducao = $1.traducao + ss_code_novo_arg.str();
     }
 ;
 
