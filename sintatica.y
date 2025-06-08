@@ -30,8 +30,10 @@ int tempElse = 0;
 // Flag para gerar a função de tamanho de string
 bool precisa_get_length = false;
 bool precisa_output_int = false;
+bool precisa_output_float = false;
 bool precisa_output_string = false;
 bool precisa_input_int = false;
+bool precisa_input_float = false;
 bool precisa_input_string = false;
 
 struct atributos {
@@ -159,19 +161,61 @@ S:
                  << "    putchar((n % 10) + '0');\n"
                  << "}\n\n";
         }
-        if (precisa_output_string) {
-            cout << "\nvoid output_string(const char* s) {\n"
-                 << "    int i = 0;\n"
-                 << "    int flag_null = s == NULL;\n"
-                 << "    if (flag_null) goto output_str_end;\n"
-                 << "output_str_loop_start:\n"
-                 << "    char c = s[i];\n"
-                 << "    int flag_fim = c == '\\0';\n"
-                 << "    if (flag_fim) goto output_str_end;\n"
-                 << "    putchar(c);\n"
+		 if (precisa_input_float) {
+            cout << "\n// Le um float caractere por caractere, em estilo 3-enderecos\n";
+            cout << "double input_float() {\n" // Usamos double em C para maior precisão
+                 << "    double num = 0.0, divisor = 1.0;\n"
+                 << "    int sign = 1, in_fraction = 0;\n" // in_fraction é uma flag
+                 << "    char c;\n"
+                 << "    // ... (declaração das suas flags temporárias int)\n\n"
+                 << "    // Ignora espacos em branco\n"
+                 << "input_float_ws_loop:\n"
+                 << "    scanf(\"%c\", &c);\n"
+                 << "    if (c == ' ' || c == '\\n') goto input_float_ws_loop;\n\n"
+                 << "    // Lida com o sinal\n"
+                 << "    if (c == '-') { sign = -1; scanf(\"%c\", &c); }\n\n"
+                 << "read_float_loop:\n"
+                 << "    if (c == '.' && in_fraction == 0) {\n"
+                 << "        in_fraction = 1;\n"
+                 << "        scanf(\"%c\", &c);\n"
+                 << "        goto read_float_loop;\n"
+                 << "    }\n"
+                 << "    if (c < '0' || c > '9') { goto read_float_end; }\n\n"
+                 << "    if (in_fraction == 0) {\n"
+                 << "        num = num * 10.0 + (c - '0');\n"
+                 << "    } else {\n"
+                 << "        divisor = divisor * 10.0;\n"
+                 << "        num = num + (double)(c - '0') / divisor;\n"
+                 << "    }\n"
+                 << "    scanf(\"%c\", &c);\n"
+                 << "    goto read_float_loop;\n\n"
+                 << "read_float_end:;\n"
+                 << "    num = (double)sign * num;\n"
+                 << "    return num;\n"
+                 << "}\n\n";
+        }
+		if (precisa_output_float) {
+            cout << "\n// Escreve um float caractere por caractere\n";
+            cout << "void output_float(double n) {\n" // Usamos double para precisão
+                 << "    int parte_inteira;\n"
+                 << "    double parte_fracionaria;\n"
+                 << "    int digito_frac, i;\n\n"
+                 << "    if (n < 0) { putchar('-'); n = -n; }\n\n"
+                 << "    parte_inteira = (int)n;\n"
+                 << "    parte_fracionaria = n - parte_inteira;\n\n"
+                 << "    output_int(parte_inteira); // Reutiliza a função para imprimir a parte inteira\n"
+                 << "    putchar('.');\n\n"
+                 << "    i = 0;\n"
+                 << "loop_frac_start:\n"
+                 // Imprime um número fixo de casas decimais (ex: 6)
+                 << "    if (i >= 6) goto loop_frac_end;\n"
+                 << "    parte_fracionaria = parte_fracionaria * 10.0;\n"
+                 << "    digito_frac = (int)parte_fracionaria;\n"
+                 << "    putchar(digito_frac + '0');\n"
+                 << "    parte_fracionaria = parte_fracionaria - digito_frac;\n"
                  << "    i = i + 1;\n"
-                 << "    goto output_str_loop_start;\n"
-                 << "output_str_end:;\n"
+                 << "    goto loop_frac_start;\n"
+                 << "loop_frac_end:;\n"
                  << "}\n\n";
         }
 		if (precisa_input_string) {
@@ -209,7 +253,21 @@ S:
                  << "    return buffer;\n"
                  << "}\n\n";
         }
-        
+		if (precisa_output_string) {
+            cout << "\nvoid output_string(const char* s) {\n"
+                 << "    int i = 0;\n"
+                 << "    int flag_null = s == NULL;\n"
+                 << "    if (flag_null) goto output_str_end;\n"
+                 << "output_str_loop_start:\n"
+                 << "    char c = s[i];\n"
+                 << "    int flag_fim = c == '\\0';\n"
+                 << "    if (flag_fim) goto output_str_end;\n"
+                 << "    putchar(c);\n"
+                 << "    i = i + 1;\n"
+                 << "    goto output_str_loop_start;\n"
+                 << "output_str_end:;\n"
+                 << "}\n\n";
+        }
         // Imprime o resto do código
         cout << fecharPilha().str();        
         cout << $1.traducao;
@@ -326,11 +384,15 @@ LISTA_EXPRESSOES:
         if (tipo == "int" || tipo == "bool") {
             precisa_output_int = true;
             ss_code << "output_int(" << c_nome << ");";
+        } else if (tipo == "float") {
+            precisa_output_float = true; // Ativa a flag para float
+            ss_code << "output_float(" << c_nome << ");";
         } else if (tipo == "string") {
             precisa_output_string = true;
             ss_code << "output_string(" << c_nome << ");";
-        } else {
-            yyerror("Tipo '" + tipo + "' nao suportado por 'escreva'");
+        } else if (tipo == "char") {
+            // Para char, usamos putchar diretamente, sem função auxiliar
+            ss_code << "putchar(" << c_nome << ");";
         }
         ss_code << "\n";
         $$.traducao = ss_code.str();
@@ -344,17 +406,25 @@ LISTA_EXPRESSOES:
         string c_nome = pilha[idx][$3.label].endereco_memoria;
         
         stringstream ss_code_novo_arg;
-        ss_code_novo_arg << $3.traducao; // Código da nova expressão
+        ss_code_novo_arg << $3.traducao;
 
         ss_code_novo_arg << qtdTab();
+        // Imprime um espaço para separar os argumentos
+        ss_code_novo_arg << "printf(\" \");\n"; 
+        ss_code_novo_arg << qtdTab();
+
         if (tipo == "int" || tipo == "bool") {
             precisa_output_int = true;
-            ss_code_novo_arg << "printf(\" \"); output_int(" << c_nome << ");"; // Adiciona espaço separador
+            ss_code_novo_arg << "output_int(" << c_nome << ");";
+        } else if (tipo == "float") {
+            precisa_output_float = true;
+			precisa_output_int = true;
+            ss_code_novo_arg << "output_float(" << c_nome << ");";
         } else if (tipo == "string") {
             precisa_output_string = true;
-            ss_code_novo_arg << "printf(\" \"); output_string(" << c_nome << ");";
-        } else {
-             yyerror("Tipo '" + tipo + "' nao suportado por 'escreva'");
+            ss_code_novo_arg << "output_string(" << c_nome << ");";
+        } else if (tipo == "char") {
+            ss_code_novo_arg << "putchar(" << c_nome << ");";
         }
         ss_code_novo_arg << "\n";
         
@@ -381,8 +451,8 @@ LISTA_VARIAVEIS:
             precisa_input_int = true;
             ss_code << qtdTab() << c_nome << " = input_int();\n";
         } else if (tipo == "float") {
-            // Se você implementar input_float(), a lógica seria aqui
-            yyerror("Leitura de floats com 'leia' nao e suportada.");
+            precisa_input_float = true;
+            ss_code << qtdTab() << c_nome << " = input_float();\n";
         } else if (tipo == "char") {
             ss_code << qtdTab() << "scanf(\" %c\", &" << c_nome << ");\n";
         } else if (tipo == "string") {

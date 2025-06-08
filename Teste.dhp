@@ -1,10 +1,5 @@
 int main() {
-    string s1;
-    string s2;
-    leia(s1);
-    leia(s2);
-    string s3 = s1 + " " + s2;
-    escreva(s1);
-    escreva(s2);
-    escreva(s3);
+    float a;
+    leia(a);
+    escreva("Variavel a vale: ", a);
 }
