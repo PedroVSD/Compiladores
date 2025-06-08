@@ -7,11 +7,9 @@
 #include <vector>
 #include <stack>
 
-
 #define YYSTYPE atributos
 
 using namespace std;
-
 
 // Declaração de funções
 void adicionaVar(string nome, string tipo, bool temp = false);
@@ -31,6 +29,10 @@ int tempElse = 0;
 
 // Flag para gerar a função de tamanho de string
 bool precisa_get_length = false;
+bool precisa_output_int = false;
+bool precisa_output_string = false;
+bool precisa_input_int = false;
+bool precisa_input_string = false;
 
 struct atributos {
 	string label;
@@ -78,6 +80,7 @@ void yyerror(string);
 %token TK_TIPO_STRING TK_STRING_LITERAL
 %token TK_IF TK_ELSE TK_ELSE_IF TK_WHILE TK_FOR TK_DO
 %token TK_BREAK TK_CONTINUE
+%token TK_ESCREVA TK_LEIA
 
 
 %start S
@@ -117,11 +120,38 @@ S:
             cout << "    return len;\n";
             cout << "}\n\n";
         }
-        
+        if (precisa_input_int) {
+             cout << "\nint input_int() {\n"
+                  << "    int num = 0, sign = 1;\n    char c;\n"
+                  << "    do { scanf(\"%c\", &c); } while (c == ' ' || c == '\\n');\n"
+                  << "    if (c == '-') { sign = -1; scanf(\"%c\", &c); }\n"
+                  << "loop_read_digits:\n"
+                  << "    if (c < '0' || c > '9') { goto end_read_digits; }\n"
+                  << "    num = num * 10 + (c - '0');\n"
+                  << "    scanf(\"%c\", &c);\n"
+                  << "    goto loop_read_digits;\n"
+                  << "end_read_digits:;\n"
+                  << "    return sign * num;\n"
+                  << "}\n\n";
+        }
+        if (precisa_output_int) {
+            cout << "\nvoid output_int(int n) {\n"
+                 << "    if (n == 0) { printf(\"0\"); return; }\n"
+                 << "    if (n < 0) { putchar('-'); n = -n; }\n"
+                 << "    if (n >= 10) output_int(n / 10);\n"
+                 << "    putchar((n % 10) + '0');\n"
+                 << "}\n\n";
+        }
+        if (precisa_output_string) {
+            cout << "\nvoid output_string(const char* s) {\n"
+                 << "    if (s != NULL) { printf(\"%s\", s); }\n"
+                 << "}\n\n";
+        }
         // Imprime o restante do código
         cout << fecharPilha().str();        
         cout << $1.traducao;
     }
+	
 ;
 INICIO:
 	DECLARACAO MAIN
@@ -187,6 +217,26 @@ COMANDO:
 	| BLOCO 		{ $$.traducao = $1.traducao; }
 	| LOOP          { $$.traducao = $1.traducao; }
 	| { criarPilha(); } COND_IF 		{ $$.traducao = $2.traducao; }
+	| TK_BREAK ';' {
+        if (pilhaDeRotulosDeLaços.empty()) { // Renomeado sem acentos
+            yyerror("'break' fora de um laco");
+        }
+        stringstream ss;
+        // Pula para o rótulo de 'break' do laço mais interno
+        // ANTES: pilhaDeRótulosDeLaços.top().rótuloBreak
+        ss << qtdTab() << "goto " << pilhaDeRotulosDeLaços.back().rotuloBreak << ";\n"; // <<< CORRIGIDO AQUI
+        $$.traducao = ss.str();
+    }
+    | TK_CONTINUE ';' {
+        if (pilhaDeRotulosDeLaços.empty()) { // Renomeado sem acentos
+            yyerror("'continue' fora de um laco");
+        }
+        stringstream ss;
+        // Pula para o rótulo de 'continue' do laço mais interno
+        // ANTES: pilhaDeRótulosDeLaços.top().rótuloContinue
+        ss << qtdTab() << "goto " << pilhaDeRotulosDeLaços.back().rotuloContinue << ";\n"; // <<< CORRIGIDO AQUI
+        $$.traducao = ss.str();
+    }
 ;
 
 DECLARACAO:
@@ -796,6 +846,7 @@ EXPR_ATOM:
         $$.label = chave_temp_sl; // O label é a chave da temporária
         $$.traducao = ss_code.str();  // O código C gerado
     }
+
 ;
 COVERT_TYPE:
 	TK_TIPO_INT '(' EXPR ')' {

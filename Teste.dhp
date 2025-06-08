@@ -1,6 +1,5 @@
-int main() 
-{
-  string a = "a";
-  string b = "b";
-  string c = a + b;
+int main() {
+   string s = "Hello";
+   string t = "World";
+   string u = s + " " + t;
 }

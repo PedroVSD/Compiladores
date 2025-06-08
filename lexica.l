@@ -35,6 +35,8 @@ ID {LETRA}({LETRA}|{DIGITO})*
 "for"       { return TK_FOR; }
 "break"     { return TK_BREAK; }    
 "continue"  { return TK_CONTINUE; }
+"escreva"   { return TK_ESCREVA; } 
+"leia"      { return TK_LEIA; } 
 
 "true"      {
 	yylval.traducao = "true";
@@ -97,6 +99,8 @@ ID {LETRA}({LETRA}|{DIGITO})*
 "{"         { return '{'; }
 "}"         { return '}'; }
 ";"         { return ';'; }
+","         { return ','; }
+
 
 [ \t]+    { /* ignora espaços */}
 \n 	   { numLinha++; }

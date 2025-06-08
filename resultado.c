@@ -29,29 +29,43 @@ loop_end_len:
 
 int main(void)
 {
-	char* d0;	 //a
-	char* d1;	 //b
-	char* d2;	 //c
-	int t2;
+	char* d0;	 //s
+	char* d1;	 //t
+	int t10;
+	int t11;
+	char* t12;
 	int t3;
 	int t4;
 	int t5;
-	char* t6;
+	int t6;
+	char* t7;
+	int t8;
+	int t9;
 	char* t0;
 	char* t1;
+	char* t2;
+	char* d2;	 //u
 
-	t0 = "a";
+	t0 = "Hello";
 	d0 = t0;
-	t1 = "b";
+	t1 = "World";
 	d1 = t1;
-	t2 = Len(d0);
-	t3 = Len(d1);
-	t4 = t2 + t3;
-	t5 = t4 + 1;
-	t6 = (char*)malloc(t5);
-	strcpy(t6, d0);
-	strcat(t6, d1);
-	d2 = t6;
+	t2 = " ";
+	t3 = Len(d0);
+	t4 = Len(t2);
+	t5 = t3 + t4;
+	t6 = t5 + 1;
+	t7 = (char*)malloc(t6);
+	strcpy(t7, d0);
+	strcat(t7, t2);
+	t8 = Len(t7);
+	t9 = Len(d1);
+	t10 = t8 + t9;
+	t11 = t10 + 1;
+	t12 = (char*)malloc(t11);
+	strcpy(t12, t7);
+	strcat(t12, d1);
+	d2 = t12;
 
 	return 0;
 }
