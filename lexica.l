@@ -21,7 +21,7 @@ ID {LETRA}({LETRA}|{DIGITO})*
 
 %%
 
-"int main"      { return TK_MAIN;}
+"int main"  { return TK_MAIN;}
 "int"       { return TK_TIPO_INT;}
 "float"     { return TK_TIPO_FLOAT;}
 "char"      { return TK_TIPO_CHAR;}
@@ -29,14 +29,14 @@ ID {LETRA}({LETRA}|{DIGITO})*
 "string"    { return TK_TIPO_STRING; }
 "if"        { return TK_IF; }
 "else"      { return TK_ELSE; }
-"else if"  { return TK_ELSE_IF; }
+"else if"  	{ return TK_ELSE_IF; }
 "while"     { return TK_WHILE; }
 "do"        { return TK_DO; }
 "for"       { return TK_FOR; }
 "break"     { return TK_BREAK; }    
 "continue"  { return TK_CONTINUE; }
-"escreva"   { return TK_ESCREVA; } 
-"leia"      { return TK_LEIA; } 
+"output"   	{ return TK_ESCREVA; } 
+"input"     { return TK_LEIA; } 
 
 "true"      {
 	yylval.traducao = "true";

@@ -1,5 +1,5 @@
 int main() {
-    float a;
-    leia(a);
-    escreva("Variavel a vale: ", a);
+    string a;
+    input(a);
+    output("Variavel a vale: ", a+a+a);
 }

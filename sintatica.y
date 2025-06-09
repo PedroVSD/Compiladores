@@ -29,9 +29,6 @@ int tempElse = 0;
 
 // Flag para gerar a função de tamanho de string
 bool precisa_get_length = false;
-bool precisa_output_int = false;
-bool precisa_output_float = false;
-bool precisa_output_string = false;
 bool precisa_input_int = false;
 bool precisa_input_float = false;
 bool precisa_input_string = false;
@@ -66,6 +63,13 @@ map<string, string> tipoTraducao = {
 	{"char", "char"},
 	{"bool", "int"},
 	{"string", "char*"}
+};
+map<string, string> tipomascara{
+	{"int", "%d"},
+	{"float", "%.6f"},
+	{"char", "%c"},
+	{"bool", "%d"},
+	{"string", "%s"}
 };
 
 
@@ -108,13 +112,13 @@ S:
         // Mudei o nome da sua função 'Len' para 'get_string_length' para consistência
         if (precisa_get_length) {
             cout << "\nint Len(const char* str) {\n"
-                 << "    int len, f0, f1, f2;\n"
+                 << "    int len;\n	int f0;\n	int f1;\n	int f2;\n\n"
                  << "    len = 0;\n"
-                 << "    f0 = str == NULL;\n"
+                 << "    f0 = (str == NULL);\n"
                  << "    if (f0) goto loop_end_len;\n"
                  << "loop_start_len:\n"
                  << "    f1 = str[len];\n"
-                 << "    f2 = f1 == '\\0';\n" // Usei f1 aqui para estilo 3-endereços
+                 << "    f2 = (f1 == '\\0');\n" // Usei f1 aqui para estilo 3-endereços
                  << "    if (f2) goto loop_end_len;\n"
                  << "    len = len + 1;\n"
                  << "    goto loop_start_len;\n"
@@ -124,7 +128,7 @@ S:
         }
         if (precisa_input_int) {
              cout << "\nint input_int() {\n"
-                  << "    int num=0, sign=1, flag_is_space, flag_is_newline, flag_is_whitespace;\n"
+                  << "    int num=0;\nint sign=1, flag_is_space, flag_is_newline, flag_is_whitespace;\n"
                   << "    char c;\n"
                   << "    int flag_is_minus, flag_is_less, flag_is_greater, flag_not_digit, temp_val;\n"
                   << "input_ws_loop:\n"
@@ -153,22 +157,16 @@ S:
                   << "    return num;\n"
                   << "}\n\n";
         }
-        if (precisa_output_int) { // A versão recursiva já é boa e não usa 'while'
-            cout << "\nvoid output_int(int n) {\n"
-                 << "    if (n == 0) { printf(\"0\"); return; }\n"
-                 << "    if (n < 0) { putchar('-'); n = -n; }\n"
-                 << "    if (n >= 10) output_int(n / 10);\n"
-                 << "    putchar((n % 10) + '0');\n"
-                 << "}\n\n";
-        }
 		 if (precisa_input_float) {
-            cout << "\n// Le um float caractere por caractere, em estilo 3-enderecos\n";
             cout << "double input_float() {\n" // Usamos double em C para maior precisão
-                 << "    double num = 0.0, divisor = 1.0;\n"
-                 << "    int sign = 1, in_fraction = 0;\n" // in_fraction é uma flag
-                 << "    char c;\n"
-                 << "    // ... (declaração das suas flags temporárias int)\n\n"
-                 << "    // Ignora espacos em branco\n"
+                 << "   double num;\ndouble divisor;\n"
+                 << "   int sign;\nint in_fraction;\n" // in_fraction é uma flag
+				 << ""
+                 << "   char c;\n\n"
+				 <<	" 	num = 0.0;\n"
+				 << "	divisor = 1.0;\n"
+				 << "	sign = 1;\n"
+				 << "	in_fraction = 0;\n\n"
                  << "input_float_ws_loop:\n"
                  << "    scanf(\"%c\", &c);\n"
                  << "    if (c == ' ' || c == '\\n') goto input_float_ws_loop;\n\n"
@@ -194,30 +192,6 @@ S:
                  << "    return num;\n"
                  << "}\n\n";
         }
-		if (precisa_output_float) {
-            cout << "\n// Escreve um float caractere por caractere\n";
-            cout << "void output_float(double n) {\n" // Usamos double para precisão
-                 << "    int parte_inteira;\n"
-                 << "    double parte_fracionaria;\n"
-                 << "    int digito_frac, i;\n\n"
-                 << "    if (n < 0) { putchar('-'); n = -n; }\n\n"
-                 << "    parte_inteira = (int)n;\n"
-                 << "    parte_fracionaria = n - parte_inteira;\n\n"
-                 << "    output_int(parte_inteira); // Reutiliza a função para imprimir a parte inteira\n"
-                 << "    putchar('.');\n\n"
-                 << "    i = 0;\n"
-                 << "loop_frac_start:\n"
-                 // Imprime um número fixo de casas decimais (ex: 6)
-                 << "    if (i >= 6) goto loop_frac_end;\n"
-                 << "    parte_fracionaria = parte_fracionaria * 10.0;\n"
-                 << "    digito_frac = (int)parte_fracionaria;\n"
-                 << "    putchar(digito_frac + '0');\n"
-                 << "    parte_fracionaria = parte_fracionaria - digito_frac;\n"
-                 << "    i = i + 1;\n"
-                 << "    goto loop_frac_start;\n"
-                 << "loop_frac_end:;\n"
-                 << "}\n\n";
-        }
 		if (precisa_input_string) {
             cout << "\n// Le uma string da entrada ate o espaco ou nova linha\n";
             cout << "char* input_string() {\n"
@@ -226,7 +200,6 @@ S:
                  << "    char* buffer = (char*)malloc(capacity);\n"
                  << "    char c;\n"
                  << "    int scanf_result, flag_is_terminator, flag_is_newline, flag_is_space, flag_is_full;\n"
-                 << "    if (buffer == NULL) { fprintf(stderr, \"Falha na alocacao inicial para input_string\\n\"); exit(1); }\n"
                  << "\n"
                  << "input_str_loop_start:\n"
                  << "    scanf_result = scanf(\"%c\", &c);\n"
@@ -245,7 +218,6 @@ S:
                  << "\n"
                  << "    capacity = capacity * 2;\n"
                  << "    buffer = (char*)realloc(buffer, capacity);\n"
-                 << "    if (buffer == NULL) { fprintf(stderr, \"Falha na realocacao de memoria para input_string\\n\"); exit(1); }\n"
                  << "    goto input_str_loop_start;\n"
                  << "\n"
                  << "input_str_loop_end:;\n"
@@ -253,21 +225,7 @@ S:
                  << "    return buffer;\n"
                  << "}\n\n";
         }
-		if (precisa_output_string) {
-            cout << "\nvoid output_string(const char* s) {\n"
-                 << "    int i = 0;\n"
-                 << "    int flag_null = s == NULL;\n"
-                 << "    if (flag_null) goto output_str_end;\n"
-                 << "output_str_loop_start:\n"
-                 << "    char c = s[i];\n"
-                 << "    int flag_fim = c == '\\0';\n"
-                 << "    if (flag_fim) goto output_str_end;\n"
-                 << "    putchar(c);\n"
-                 << "    i = i + 1;\n"
-                 << "    goto output_str_loop_start;\n"
-                 << "output_str_end:;\n"
-                 << "}\n\n";
-        }
+
         // Imprime o resto do código
         cout << fecharPilha().str();        
         cout << $1.traducao;
@@ -339,96 +297,46 @@ COMANDO:
 	| LOOP          { $$.traducao = $1.traducao; }
 	| { criarPilha(); } COND_IF 		{ $$.traducao = $2.traducao; }
 	| COMANDO_SAIDA ';'   { $$.traducao = $1.traducao; }
-    | COMANDO_ENTRADA ';' { $$.traducao = $1.traducao; }
-	| TK_BREAK ';' {
-        if (pilhaDeRotulosDeLaços.empty()) { // Renomeado sem acentos
-            yyerror("'break' fora de um laco");
-        }
-        stringstream ss;
-        // Pula para o rótulo de 'break' do laço mais interno
-        // ANTES: pilhaDeRótulosDeLaços.top().rótuloBreak
-        ss << qtdTab() << "goto " << pilhaDeRotulosDeLaços.back().rotuloBreak << ";\n"; // <<< CORRIGIDO AQUI
-        $$.traducao = ss.str();
-    }
-    | TK_CONTINUE ';' {
-        if (pilhaDeRotulosDeLaços.empty()) { // Renomeado sem acentos
-            yyerror("'continue' fora de um laco");
-        }
-        stringstream ss;
-        // Pula para o rótulo de 'continue' do laço mais interno
-        // ANTES: pilhaDeRótulosDeLaços.top().rótuloContinue
-        ss << qtdTab() << "goto " << pilhaDeRotulosDeLaços.back().rotuloContinue << ";\n"; // <<< CORRIGIDO AQUI
-        $$.traducao = ss.str();
-    }
-	COMANDO_SAIDA:
-    TK_ESCREVA '(' LISTA_EXPRESSOES ')' {
-        // A LISTA_EXPRESSOES ($3) já contém o código para cada printf individual.
-        // Aqui, apenas adicionamos o pulo de linha final.
+    | COMANDO_ENTRADA ';' { $$.traducao = $1.traducao; }	
+;
+
+COMANDO_SAIDA:
+    TK_ESCREVA '(' LISTA_EXPRESSOES ')' 
+	{
         $$.traducao = $3.traducao + qtdTab() + "printf(\"\\n\");\n";
     }
 ;
 
 LISTA_EXPRESSOES:
-    // Caso base: A lista tem apenas uma expressão.
     EXPR {
         int idx = buscarVariavel($1.label);
         if (idx == -1) { yyerror("Variavel ou expressao '" + $1.label + "' invalida em 'escreva'."); }
 
         string tipo = pilha[idx][$1.label].tipo;
-        string c_nome = pilha[idx][$1.label].endereco_memoria;
+        string var = pilha[idx][$1.label].endereco_memoria;
         
-        stringstream ss_code;
-        ss_code << $1.traducao; // Inclui o código que calcula a expressão
+        stringstream ss;
+        ss << $1.traducao; // Inclui o código que calcula a expressão
         
-        ss_code << qtdTab();
-        if (tipo == "int" || tipo == "bool") {
-            precisa_output_int = true;
-            ss_code << "output_int(" << c_nome << ");";
-        } else if (tipo == "float") {
-            precisa_output_float = true; // Ativa a flag para float
-            ss_code << "output_float(" << c_nome << ");";
-        } else if (tipo == "string") {
-            precisa_output_string = true;
-            ss_code << "output_string(" << c_nome << ");";
-        } else if (tipo == "char") {
-            // Para char, usamos putchar diretamente, sem função auxiliar
-            ss_code << "putchar(" << c_nome << ");";
-        }
-        ss_code << "\n";
-        $$.traducao = ss_code.str();
+        ss << qtdTab() << "printf(" << "\"" << tipomascara[tipo] << "\", " << var << ");\n"; 
+        
+        $$.traducao = ss.str();
     }
     // Caso recursivo: Uma lista, vírgula, e mais uma expressão.
     | LISTA_EXPRESSOES ',' EXPR {
         int idx = buscarVariavel($3.label);
-        if (idx == -1) { yyerror("Variavel ou expressao '" + $3.label + "' invalida em 'escreva'."); }
+        if (idx == -1) { yyerror("Variavel ou expressao '" + $3.label + "' invalida em 'output'."); }
         
         string tipo = pilha[idx][$3.label].tipo;
-        string c_nome = pilha[idx][$3.label].endereco_memoria;
+        string var = pilha[idx][$3.label].endereco_memoria;
         
-        stringstream ss_code_novo_arg;
-        ss_code_novo_arg << $3.traducao;
+        stringstream ss;
+        ss << $3.traducao;
 
-        ss_code_novo_arg << qtdTab();
-        // Imprime um espaço para separar os argumentos
-        ss_code_novo_arg << "printf(\" \");\n"; 
-        ss_code_novo_arg << qtdTab();
+        ss << qtdTab() << "printf(\"" << tipomascara[tipo] << "\", " << var << ");\n";
 
-        if (tipo == "int" || tipo == "bool") {
-            precisa_output_int = true;
-            ss_code_novo_arg << "output_int(" << c_nome << ");";
-        } else if (tipo == "float") {
-            precisa_output_float = true;
-			precisa_output_int = true;
-            ss_code_novo_arg << "output_float(" << c_nome << ");";
-        } else if (tipo == "string") {
-            precisa_output_string = true;
-            ss_code_novo_arg << "output_string(" << c_nome << ");";
-        } else if (tipo == "char") {
-            ss_code_novo_arg << "putchar(" << c_nome << ");";
-        }
-        ss_code_novo_arg << "\n";
-        
-        $$.traducao = $1.traducao + ss_code_novo_arg.str();
+                
+        $$.traducao = $1.traducao + ss.str();
     }
 ;
 
@@ -456,11 +364,7 @@ LISTA_VARIAVEIS:
         } else if (tipo == "char") {
             ss_code << qtdTab() << "scanf(\" %c\", &" << c_nome << ");\n";
         } else if (tipo == "string") {
-            // <<< LÓGICA ATUALIZADA PARA STRING >>>
-            precisa_input_string = true; // Ativa a flag para gerar a função
-            // NOTA: Se 'c_nome' já apontava para uma string alocada, essa memória será perdida (vazamento).
-            // Lidar com isso requereria um 'free' antes da nova atribuição.
-            ss_code << qtdTab() << "// AVISO: Se '" << $1.label << "' ja continha uma string, a memoria antiga pode vazar.\n";
+            precisa_input_string = true; 
             ss_code << qtdTab() << c_nome << " = input_string();\n";
         } else {
             yyerror("Tipo '" + tipo + "' invalido para 'leia'.");
@@ -468,6 +372,7 @@ LISTA_VARIAVEIS:
         $$.traducao = ss_code.str();
     }
     | LISTA_VARIAVEIS ',' TK_ID {
+
         // A lógica é idêntica para o caso recursivo
         int idx = buscarVariavel($3.label);
         if (idx == -1) { yyerror("Variavel '" + $3.label + "' nao declarada para 'leia'."); }
@@ -475,19 +380,23 @@ LISTA_VARIAVEIS:
         string tipo = pilha[idx][$3.label].tipo;
         string c_nome = pilha[idx][$3.label].endereco_memoria;
         
-        stringstream ss_code_novo_arg;
+        stringstream ss_code;
         if (tipo == "int" || tipo == "bool") {
             precisa_input_int = true;
-            ss_code_novo_arg << qtdTab() << c_nome << " = input_int();\n";
+            ss_code << qtdTab() << c_nome << " = input_int();\n";
+        } else if (tipo == "float") {
+            precisa_input_float = true;
+            ss_code << qtdTab() << c_nome << " = input_float();\n";
+        } else if (tipo == "char") {
+            ss_code << qtdTab() << "scanf(\" %c\", &" << c_nome << ");\n";
         } else if (tipo == "string") {
-            precisa_input_string = true;
-            ss_code_novo_arg << qtdTab() << "// AVISO: Se '" << $3.label << "' ja continha uma string, a memoria antiga pode vazar.\n";
-            ss_code_novo_arg << qtdTab() << c_nome << " = input_string();\n";
+            precisa_input_string = true; 
+            ss_code << qtdTab() << c_nome << " = input_string();\n";
         } else {
-            // ... erros para outros tipos
+            yyerror("Tipo '" + tipo + "' invalido para 'leia'.");
         }
         
-        $$.traducao = $1.traducao + ss_code_novo_arg.str();
+        $$.traducao = $1.traducao + ss_code.str();
     }
 ;
 
