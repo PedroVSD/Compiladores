@@ -1,5 +1,16 @@
-int main() {
-    string a;
-    input(a);
-    output("Variavel a vale: ", a+a+a);
+int main(){
+
+    int opcao = 2;
+
+    switch(opcao) {
+    case 1:
+        output("Um");
+        break;
+    case 2:
+        output("Dois");
+        break;
+    default:
+        output("Outro");
+        break;
+}
 }

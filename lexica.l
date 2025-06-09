@@ -37,6 +37,9 @@ ID {LETRA}({LETRA}|{DIGITO})*
 "continue"  { return TK_CONTINUE; }
 "output"   	{ return TK_ESCREVA; } 
 "input"     { return TK_LEIA; } 
+"switch"    { return TK_SWITCH; }
+"case"      { return TK_CASE; }
+"default"   { return TK_DEFAULT; }
 
 "true"      {
 	yylval.traducao = "true";
@@ -99,6 +102,7 @@ ID {LETRA}({LETRA}|{DIGITO})*
 "{"         { return '{'; }
 "}"         { return '}'; }
 ";"         { return ';'; }
+":"			{ return ':'; }
 ","         { return ','; }
 
 

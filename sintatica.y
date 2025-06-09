@@ -19,6 +19,7 @@ void addPilhaLaco(string b, string c);
 stringstream fecharPilha();
 int buscarVariavel(string nome);
 string qtdTab(int dif = 0);
+string generateSwitchCases(string caseData, string switchVar, string switchId); 
 
 // Contadores globais
 int tempVar = 0;
@@ -26,6 +27,7 @@ int defVar = 0;
 int defbloco = 0;
 int defgoto = 0;
 int tempElse = 0;
+string current_switch_var = "";
 
 // Flag para gerar a função de tamanho de string
 bool precisa_get_length = false;
@@ -87,6 +89,7 @@ void yyerror(string);
 %token TK_IF TK_ELSE TK_ELSE_IF TK_WHILE TK_FOR TK_DO
 %token TK_BREAK TK_CONTINUE
 %token TK_ESCREVA TK_LEIA
+%token TK_SWITCH TK_CASE TK_DEFAULT
 
 
 %start S
@@ -298,6 +301,7 @@ COMANDO:
 	| { criarPilha(); } COND_IF 		{ $$.traducao = $2.traducao; }
 	| COMANDO_SAIDA ';'   { $$.traducao = $1.traducao; }
     | COMANDO_ENTRADA ';' { $$.traducao = $1.traducao; }	
+	| SWITCH_STMT { $$.traducao = $1.traducao; }
 ;
 
 COMANDO_SAIDA:
@@ -758,6 +762,99 @@ COND_ELSE:
 	{
 		$$.traducao = "";
 	}
+;
+//Até a linha 858 é relacionado ao switch
+SWITCH_STMT:
+    { 
+        criarPilha(); 
+        addPilhaLaco("EndSwitch" + to_string(defgoto), "EndSwitch" + to_string(defgoto)); 
+    } 
+    TK_SWITCH '(' EXPR ')' {
+        // Armazenar a variável do switch globalmente
+        if (buscarVariavel($4.label) == -1) {
+            yyerror("Variável '" + $4.label + "' não declarada no switch.");
+        }
+        current_switch_var = pilha[buscarVariavel($4.label)][$4.label].endereco_memoria;
+    }
+    '{' SIMPLE_CASE_LIST '}' {
+        
+        // Geração de código
+        stringstream ss;
+        string rotuloEnd = pilhaDeRotulosDeLaços.back().rotuloBreak;
+        string switch_id = to_string(defgoto);
+        
+        ss << qtdTab(-1) << "{\n";
+        ss << fecharPilha().str();
+        ss << "\n";
+        
+        // Avalia a expressão do switch
+        ss << $4.traducao;
+        
+        // Gera os cases
+        ss << $8.traducao;
+        
+        // Label de saída do switch
+        ss << qtdTab(1) << rotuloEnd << ":\n";
+        ss << qtdTab() << "}\n";
+        
+        // Remove da pilha de laços
+        pilhaDeRotulosDeLaços.pop_back();
+        defgoto++;
+        
+        // Limpar a variável global
+        current_switch_var = "";
+        
+        $$.traducao = ss.str();
+    }
+;
+
+
+SIMPLE_CASE_LIST:
+    SIMPLE_CASE SIMPLE_CASE_LIST {
+        $$.traducao = $1.traducao + $2.traducao;
+    }
+    | SIMPLE_CASE {
+        $$.traducao = $1.traducao;
+    }
+    | SIMPLE_DEFAULT {
+        $$.traducao = $1.traducao;
+    }
+    | /* vazio */ {
+        $$.traducao = "";
+    }
+;
+
+SIMPLE_CASE:
+    TK_CASE TK_NUM ':' COMANDOS {
+        stringstream ss;
+        string case_id = to_string(defgoto);
+        
+        // Mesmo padrão do if: comparação em três endereços
+        string temp_val = "t" + to_string(tempVar);
+        adicionaVar(temp_val, "int", true);
+        
+        string temp_comp = "t" + to_string(tempVar);
+        adicionaVar(temp_comp, "bool", true);
+        
+        ss << qtdTab(1) << temp_val << " = " << $2.traducao << ";\n";
+        ss << qtdTab(1) << temp_comp << " = " << current_switch_var << " == " << temp_val << ";\n";
+        ss << qtdTab(1) << "if (!" << temp_comp << ") goto NextCase" << case_id << "_" << $2.traducao << ";\n";
+        ss << $4.traducao;
+        ss << qtdTab(1) << "goto EndSwitch" << case_id << ";\n";
+        ss << qtdTab(1) << "NextCase" << case_id << "_" << $2.traducao << ":\n";
+        
+        $$.traducao = ss.str();
+    }
+;
+
+SIMPLE_DEFAULT:
+    TK_DEFAULT ':' COMANDOS {
+        stringstream ss;
+        
+        ss << $3.traducao;
+        
+        $$.traducao = ss.str();
+    }
 ;
 
 EXPR:
@@ -1309,4 +1406,39 @@ string qtdTab(int dif){
 		tab += "\t";
 	}
 	return tab;
+}
+
+
+string generateSwitchCases(string caseData, string switchVar, string switchId) {
+    stringstream ss;
+    
+    // Parse dos dados dos cases
+    vector<string> cases;
+    vector<string> comandos;
+    bool hasDefault = false;
+    string defaultComandos = "";
+    
+    // Separar cases e comandos (implementação simplificada)
+    // Você precisará adaptar baseado na estrutura real dos seus dados
+    
+    string var_switch = pilha[buscarVariavel(switchVar)][switchVar].endereco_memoria;
+    
+    // Gerar comparações para cada case (mesmo padrão do if)
+    for (int i = 0; i < cases.size(); i++) {
+        string temp_comp = "t" + to_string(tempVar);
+        adicionaVar(temp_comp, "bool", true);
+        
+        ss << qtdTab(1) << temp_comp << " = " << var_switch << " == " << cases[i] << ";\n";
+        ss << qtdTab(1) << "if (!" << temp_comp << ") goto Case" << switchId << "_" << (i+1) << ";\n";
+        ss << comandos[i];
+        ss << qtdTab(1) << "goto EndSwitch" << switchId << ";\n";
+        ss << qtdTab(1) << "Case" << switchId << "_" << (i+1) << ":\n";
+    }
+    
+    // Default case se existir
+    if (hasDefault) {
+        ss << defaultComandos;
+    }
+    
+    return ss.str();
 }
