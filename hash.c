@@ -8,7 +8,7 @@
 
 
 Hash_map *criarHashMap(int tamanho);
-unsigned int hash(const char *str);
+unsigned int hash(const char *str, int tamanho);
 Value *createIntValue(int x);
 Value *createFloatValue(float x);
 Value *createStringValue(char *str);
@@ -44,7 +44,7 @@ Hash_map *criarHashMap(int tamanho) {
     return chave % TAM; // Função de hash simples
 }*/
 //A função abaixo é uma função de hash simples que usa o algoritmo djb2, pesquisei sobre e vi que era uma boa função de hash e evita colisões
-unsigned int hash(const char *str) {
+unsigned int hash(const char *str, int tamanho) {
     unsigned int hash = 5381;
     int c;
 
@@ -52,7 +52,7 @@ unsigned int hash(const char *str) {
         hash = ((hash << 5) + hash) + c; // hash * 33 + c usando shift
     }
 
-    return hash % TAM; // Retorna o índice dentro do tamanho da tabela
+    return hash % tamanho; // Retorna o índice dentro do tamanho da tabela
     
 }
 
@@ -94,7 +94,7 @@ Value *createCharValue(char x){
 
 //Inserção de valores
 void insereHashMap(Hash_map *hash_map, const char *chave, Value value) {
-    unsigned int index = hash(chave);
+    unsigned int index = hash(chave, hash_map->tamanho);
     while (hash_map->tabela[index].ocupado == 1) { // Enquanto a posição estiver ocupada
         if (strcmp(hash_map->tabela[index].chave, chave) == 0) {
             // Se a chave já existe, atualiza o valor
@@ -120,7 +120,7 @@ void insereTabela(int valor, int tabela[]){
 }*/
 
 int buscaTabela(Hash_map *hash_map, const char *chave) {
-    unsigned int index = hash(chave);
+    unsigned int index = hash(chave, hash_map->tamanho);
     unsigned int start_index = index;
     while (hash_map->tabela[index].ocupado) {
         if (strcmp(hash_map->tabela[index].chave, chave) == 0) {
@@ -136,7 +136,7 @@ int buscaTabela(Hash_map *hash_map, const char *chave) {
 }
 
 void removeHashMap(Hash_map *hash_map, const char *chave) {
-    unsigned int index = hash(chave);
+    unsigned int index = hash(chave, hash_map->tamanho);
     while (hash_map->tabela[index].ocupado) {
         if (strcmp(hash_map->tabela[index].chave, chave) == 0) {
             // Marca como removido
