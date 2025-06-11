@@ -1,16 +1,5 @@
 int main(){
-
-    int opcao = 2;
-
-    switch(opcao) {
-    case 1:
-        output("Um");
-        break;
-    case 2:
-        output("Dois");
-        break;
-    default:
-        output("Outro");
-        break;
-}
+    bool a;
+    input(a);
+    output(a);
 }

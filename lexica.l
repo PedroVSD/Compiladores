@@ -85,7 +85,7 @@ ID {LETRA}({LETRA}|{DIGITO})*
 }
 
 "="         { return '='; }
-[+\-*/]     { return *yytext; }
+[+\-*/%]     { return *yytext; }
 "=="        { return TK_IGUAL; }
 "!="        { return TK_DIFERENTE; }
 "<"         { return '<'; }
