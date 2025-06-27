@@ -35,8 +35,8 @@
    especially those whose name start with YY_ or yy_.  They are
    private implementation details that can be changed or removed.  */
 
-#ifndef YY_YY_Y_TAB_H_INCLUDED
-# define YY_YY_Y_TAB_H_INCLUDED
+#ifndef YY_YY_SINTATICA_TAB_H_INCLUDED
+# define YY_YY_SINTATICA_TAB_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -85,55 +85,11 @@ extern int yydebug;
     TK_SWITCH = 286,               /* TK_SWITCH  */
     TK_CASE = 287,                 /* TK_CASE  */
     TK_DEFAULT = 288,              /* TK_DEFAULT  */
-    TK_QUICKSORT = 289,            /* TK_QUICKSORT  */
-    TK_CRIAR_VETOR = 290,          /* TK_CRIAR_VETOR  */
-    TK_IMPRIMIR_VETOR = 291,       /* TK_IMPRIMIR_VETOR  */
-    UMINUS = 292,                  /* UMINUS  */
-    LOWER_THAN_ELSE = 293          /* LOWER_THAN_ELSE  */
+    UMINUS = 289,                  /* UMINUS  */
+    LOWER_THAN_ELSE = 290          /* LOWER_THAN_ELSE  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
-/* Token kinds.  */
-#define YYEMPTY -2
-#define YYEOF 0
-#define YYerror 256
-#define YYUNDEF 257
-#define TK_NUM 258
-#define TK_ID 259
-#define TK_TIPO_INT 260
-#define TK_TIPO_FLOAT 261
-#define TK_MAIN 262
-#define TK_TIPO_CHAR 263
-#define TK_TIPO_BOOL 264
-#define TK_IGUAL 265
-#define TK_DIFERENTE 266
-#define TK_MAIOR_IGUAL 267
-#define TK_MENOR_IGUAL 268
-#define TK_AND 269
-#define TK_OR 270
-#define TK_CHAR 271
-#define TK_BOOL_TRUE 272
-#define TK_BOOL_FALSE 273
-#define TK_TIPO_STRING 274
-#define TK_STRING_LITERAL 275
-#define TK_IF 276
-#define TK_ELSE 277
-#define TK_ELSE_IF 278
-#define TK_WHILE 279
-#define TK_FOR 280
-#define TK_DO 281
-#define TK_BREAK 282
-#define TK_CONTINUE 283
-#define TK_ESCREVA 284
-#define TK_LEIA 285
-#define TK_SWITCH 286
-#define TK_CASE 287
-#define TK_DEFAULT 288
-#define TK_QUICKSORT 289
-#define TK_CRIAR_VETOR 290
-#define TK_IMPRIMIR_VETOR 291
-#define UMINUS 292
-#define LOWER_THAN_ELSE 293
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -149,4 +105,4 @@ extern YYSTYPE yylval;
 int yyparse (void);
 
 
-#endif /* !YY_YY_Y_TAB_H_INCLUDED  */
+#endif /* !YY_YY_SINTATICA_TAB_H_INCLUDED  */

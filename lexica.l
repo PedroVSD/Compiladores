@@ -1,6 +1,6 @@
 %{
 #include <string>
-#include "y.tab.h"
+#include "sintatica.tab.h"
 int numLinha = 1;
 
 using namespace std;
@@ -40,10 +40,6 @@ ID {LETRA}({LETRA}|{DIGITO})*
 "switch"    { return TK_SWITCH; }
 "case"      { return TK_CASE; }
 "default"   { return TK_DEFAULT; }
-"quicksort"  { return TK_QUICKSORT; }
-"criar_vetor"     { return TK_CRIAR_VETOR; }
-"imprimir_vetor"  { return TK_IMPRIMIR_VETOR; }
-"conjunto"  { return TK_CONJUNTO; }
 
 "true"      {
 	yylval.traducao = "true";
@@ -70,9 +66,10 @@ ID {LETRA}({LETRA}|{DIGITO})*
 }
 
 {NUM_INTEIRO} {
-	yylval.traducao = yytext;
-	yylval.label = yytext;
-	return TK_NUM;
+    yylval.traducao = yytext;
+    yylval.label = yytext; // Suspeito que esta linha ainda possa estar causando problema
+    
+    return TK_NUM;
 }
 
 {STRING_LITERAL} {
@@ -108,6 +105,8 @@ ID {LETRA}({LETRA}|{DIGITO})*
 ";"         { return ';'; }
 ":"			{ return ':'; }
 ","         { return ','; }
+"["         { return '['; } 
+"]"         { return ']'; }
 
 
 [ \t]+    { /* ignora espaços */}
