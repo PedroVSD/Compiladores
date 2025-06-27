@@ -1,7 +1,10 @@
 int main() {
-    int v[5];
-    int i = 0;
-    v[i] = 10;
-    int a = v[i];
+    int m[4];
+    m[0] = 10;
+ 
+    
+    int a = m[0];
+    
     output(a);
+
 }

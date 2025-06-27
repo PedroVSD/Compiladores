@@ -12,7 +12,7 @@ int main(void)
 	int t0;
 	int t1;
 	int t2;
-	int* d0 = NULL;	//v
+	int d0;	//v
 
 	d0 = (int*)malloc(5 * sizeof(int));
 	if (d0 == NULL) { fprintf(stderr, "Falha ao alocar memoria para o vetor!\n"); exit(1); }

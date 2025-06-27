@@ -7,22 +7,22 @@ int main(void)
 {
 {
 	/* Declaracoes para este escopo */
-	int d2;	//a
-	int d1;	//i
+	int d1;	//a
+	int* d0 = NULL;	//m
 	int t0;
 	int t1;
 	int t2;
-	int* d0 = NULL;	//v
+	int t3;
 
-	d0 = (int*)malloc(5 * sizeof(int));
+	d0 = (int*)malloc(4 * sizeof(int));
 	if (d0 == NULL) { fprintf(stderr, "Falha ao alocar memoria para o vetor!\n"); exit(1); }
 	t0 = 0;
-	d1 = t0;
 	t1 = 10;
-	d0[d1] = t1;
-	t2 = d0[d1];
-	d2 = t2;
-	printf("%d", d2);
+	d0[t0] = t1;
+	t2 = 0;
+	t3 = d0[t2];
+	d1 = t3;
+	printf("%d", d1);
 	printf("\n");
 
 	/* Liberando memoria alocada neste escopo */

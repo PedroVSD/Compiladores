@@ -1,0 +1,1 @@
+int main() { int m[2][3]; }
