@@ -40,6 +40,10 @@ ID {LETRA}({LETRA}|{DIGITO})*
 "switch"    { return TK_SWITCH; }
 "case"      { return TK_CASE; }
 "default"   { return TK_DEFAULT; }
+"quicksort"  { return TK_QUICKSORT; }
+"criar_vetor"     { return TK_CRIAR_VETOR; }
+"imprimir_vetor"  { return TK_IMPRIMIR_VETOR; }
+"conjunto"  { return TK_CONJUNTO; }
 
 "true"      {
 	yylval.traducao = "true";

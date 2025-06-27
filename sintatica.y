@@ -94,6 +94,7 @@ void yyerror(string);
 %token TK_BREAK TK_CONTINUE
 %token TK_ESCREVA TK_LEIA
 %token TK_SWITCH TK_CASE TK_DEFAULT
+%token TK_QUICKSORT TK_CRIAR_VETOR TK_IMPRIMIR_VETOR
 
 
 %start S
@@ -115,7 +116,8 @@ S:
     INICIO {
         cout << "/*Compilador DHP*/\n";
         cout << "\n#include<stdio.h>\n#include<string.h>\n#include<stdlib.h>\n";
-
+		cout << "#include\"quicksort.h\"\n\n";
+		
         // Mudei o nome da sua função 'Len' para 'get_string_length' para consistência
         if (precisa_get_length) {
             cout << "\nint Len(const char* str) {\n"
@@ -294,6 +296,7 @@ COMANDO:
 	| COMANDO_SAIDA ';'   { $$.traducao = $1.traducao; }
     | COMANDO_ENTRADA ';' { $$.traducao = $1.traducao; }	
 	| SWITCH_STMT { $$.traducao = $1.traducao; }
+	| QUICKSORT_CMD ';' { $$.traducao = $1.traducao; }
 ;
 
 COMANDO_SAIDA:
@@ -1092,7 +1095,7 @@ EXPR_ATOM:
     }
     | TK_STRING_LITERAL { // <<< ADICIONADO E CORRIGIDO
         // 1. Criar chave para a temporária do literal string
-        string chave_temp_sl = "t_sl_" + to_string(tempVar);
+        string chave_temp_sl = "t" + to_string(tempVar);
         
         // 2. Adicionar à tabela com tipo "string"
         adicionaVar(chave_temp_sl, "string", true);
@@ -1104,6 +1107,8 @@ EXPR_ATOM:
         // $1.traducao do lexer já é o literal C com aspas (ex: "\"ola\"")
         stringstream ss_code;
         ss_code << qtdTab() << c_nome_sl << " = " << $1.traducao << ";\n";
+
+		pilha[pilha.size()-1][chave_temp_sl].malocada = true; // Marca como malocada
         
         // 5. Definir atributos
         $$.label = chave_temp_sl; // O label é a chave da temporária
@@ -1128,6 +1133,53 @@ COVERT_TYPE:
 		$$.traducao = $3.traducao + ss.str();
 		adicionaVar(temp, "float", true);
 	}
+;
+
+QUICKSORT_CMD:
+    TK_QUICKSORT '(' TK_ID ',' TK_NUM ')' {
+        if (buscarVariavel($3.label) == -1) {
+            yyerror("Vetor '" + $3.label + "' não declarado.");
+        }
+        
+        string tipo_var = pilha[buscarVariavel($3.label)][$3.label].tipo;
+        if (tipo_var != "int*" && tipo_var != "vetor_int") {
+            yyerror("QuickSort só funciona com vetores de inteiros.");
+        }
+        
+        stringstream ss;
+        string endereco_vetor = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria;
+        
+        ss << qtdTab() << "quick_sort_completo(" << endereco_vetor << ", " << $5.traducao << ");\n";
+        
+        $$.traducao = ss.str();
+    }
+    | TK_CRIAR_VETOR '(' TK_ID ',' TK_NUM ')' {
+        // Verificar se variável já existe
+        if (buscarVariavel($3.label) != -1) {
+            yyerror("Variável '" + $3.label + "' já declarada.");
+        }
+        
+        adicionaVar($3.label, "int*", false);
+        
+        stringstream ss;
+        string endereco_vetor = pilha[pilha.size()-1][$3.label].endereco_memoria;
+        
+        ss << qtdTab() << endereco_vetor << " = criar_vetor(" << $5.traducao << ");\n";
+        
+        $$.traducao = ss.str();
+    }
+    | TK_IMPRIMIR_VETOR '(' TK_ID ',' TK_NUM ')' {
+        if (buscarVariavel($3.label) == -1) {
+            yyerror("Vetor '" + $3.label + "' não declarado.");
+        }
+        
+        stringstream ss;
+        string endereco_vetor = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria;
+        
+        ss << qtdTab() << "imprimir_vetor(" << endereco_vetor << ", " << $5.traducao << ");\n";
+        
+        $$.traducao = ss.str();
+    }
 ;
 %%
 
