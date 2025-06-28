@@ -1,10 +1,16 @@
 int main() {
     int m[4];
-    m[0] = 10;
- 
-    
-    int a = m[0];
-    
-    output(a);
 
+    m[0] = 10;
+    m[1] = 1;
+    m[2] = 9;
+    m[3] = -1;
+    
+    output("Antes da ordenacao:");
+    imprimir_vetor(m, 4);
+    
+    quicksort(m, 4);
+    
+    output("Depois da ordenacao:");
+    imprimir_vetor(m, 4);
 }

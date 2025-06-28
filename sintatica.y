@@ -89,6 +89,23 @@ map<string, string> tipomascara{
 extern int numLinha;
 int yylex(void);
 void yyerror(string);
+
+string novoRotulo() {
+    return "L" + to_string(defgoto++);
+}
+
+string novaTemp(string tipo) {
+    // 1. Cria uma chave única para a tabela de símbolos (ex: "t_auto_10")
+    string chave_temp = "t_auto_" + to_string(tempVar);
+
+    // 2. Adiciona a variável na tabela de símbolos usando sua função existente.
+    // Assinatura: adicionaVar(nome, tipo, temp, eh_vetor, tamanho, etc...)
+    adicionaVar(chave_temp, tipo, true, false, 0, false, 0, 0, false, false);
+
+    // 3. Retorna o nome C gerado (ex: "t10"), que está em 'endereco_memoria'.
+    return pilha.back()[chave_temp].endereco_memoria;
+}
+
 %}
 
 %token TK_NUM TK_ID TK_TIPO_INT TK_TIPO_FLOAT TK_MAIN
@@ -101,7 +118,7 @@ void yyerror(string);
 %token TK_BREAK TK_CONTINUE
 %token TK_ESCREVA TK_LEIA
 %token TK_SWITCH TK_CASE TK_DEFAULT
-
+%token TK_IMPRIMIR_VETOR TK_QUICKSORT
 
 %start S
 
@@ -122,6 +139,7 @@ S:
     INICIO {
         cout << "/*Compilador DHP*/\n";
         cout << "\n#include<stdio.h>\n#include<string.h>\n#include<stdlib.h>\n";
+		cout << "#include\"algoritmos/quicksort.h\"\n\n";
 
         // Mudei o nome da sua função 'Len' para 'get_string_length' para consistência
         if (precisa_get_length) {
@@ -318,6 +336,7 @@ COMANDO:
 	| { criarPilha(); } COND_IF 		{ $$.traducao = $2.traducao; }
 	| COMANDO_SAIDA ';'   { $$.traducao = $1.traducao; }
     | COMANDO_ENTRADA ';' { $$.traducao = $1.traducao; }
+	| FUNCOES_VETOR ';'   { $$.traducao = $1.traducao; }
     | SWITCH_STMT       { $$.traducao = $1.traducao; }
     | TK_BREAK ';' { 
         if (pilhaDeRotulosDeLaços.empty()) {
@@ -384,6 +403,91 @@ LISTA_EXPRESSOES:
 COMANDO_ENTRADA:
     TK_LEIA '(' LISTA_VARIAVEIS ')' {
         $$.traducao = $3.traducao;
+    }
+;
+
+
+FUNCOES_VETOR:
+    TK_IMPRIMIR_VETOR '(' TK_ID ',' TK_NUM ')' {
+        string nome_vetor = $3.label;
+		string tipo = pilha[buscarVariavel(nome_vetor)][nome_vetor].tipo;
+        string tamanho = $5.traducao;
+        
+        if (buscarVariavel(nome_vetor) == -1) {
+            yyerror("Vetor '" + nome_vetor + "' não foi declarado.");
+        }
+        
+        string tipo_var = pilha[buscarVariavel(nome_vetor)][nome_vetor].tipo;
+        if (tipo_var != "int" || !pilha[buscarVariavel(nome_vetor)][nome_vetor].eh_vetor) {
+            yyerror("'" + nome_vetor + "' não é um vetor de inteiros.");
+        }
+        
+        string endereco_vetor = pilha[buscarVariavel(nome_vetor)][nome_vetor].endereco_memoria;
+
+        // --- Início da Geração do Laço com GOTO ---
+        stringstream ss;
+        string contador = novaTemp("int");      // Variável para o 'i' do laço (ex: t10)
+        string condicao = novaTemp("int");      // Variável para o resultado da condição (ex: t11)
+        string rotulo_inicio = novoRotulo();    // Rótulo de início do laço (ex: L3)
+        string rotulo_fim = novoRotulo();       // Rótulo de fim do laço (ex: L4)
+
+		string temp = "t" + to_string(tempVar);
+		ss << qtdTab() << temp << " = " << nome_vetor << "["<< tamanho << "];\n";
+		
+		adicionaVar(temp, tipo, true, false, 0, false, 0, 0, false, false);
+        ss << qtdTab() << "printf(" << "\"" << tipomascara[tipo] << "\", " << temp << ");\n";
+        
+        // Inicialização: i = 0;
+        ss << qtdTab() << contador << " = 0;\n";
+        
+        // Rótulo de início do laço
+        ss << qtdTab() << rotulo_inicio << ":\n";
+        
+        // Condição: if (!(i < tamanho)) goto fim;
+        ss << qtdTab(1) << condicao << " = " << contador << " < " << tamanho << ";\n";
+        ss << qtdTab(1) << "if (!" << condicao << ") goto " << rotulo_fim << ";\n";
+        
+        // Corpo do laço: printf("%d", vetor[i]);
+        ss << qtdTab(1) << "printf(\"%d\", " << endereco_vetor << "[" << contador << "]);\n";
+        
+        // Corpo do laço: if (i < tamanho - 1) printf(", ");
+        ss << qtdTab(1) << condicao << " = " << contador << " < " << tamanho << " - 1;\n";
+        ss << qtdTab(1) << "if (" << condicao << ") printf(\", \");\n";
+        
+        // Incremento: i = i + 1;
+        ss << qtdTab(1) << contador << " = " << contador << " + 1;\n";
+        
+        // Volta para o início
+        ss << qtdTab(1) << "goto " << rotulo_inicio << ";\n";
+        
+        // Rótulo de fim do laço
+        ss << qtdTab() << rotulo_fim << ":;\n";
+        
+        ss << qtdTab() << "printf(\"]\\n\");\n";
+        // --- Fim da Geração do Laço com GOTO ---
+        
+        $$.traducao = ss.str();
+    }
+    | TK_QUICKSORT '(' TK_ID ',' TK_NUM ')' {
+        // ... (código do quicksort permanece o mesmo)
+        string nome_vetor = $3.label;
+        string tamanho = $5.traducao;
+        
+        if (buscarVariavel(nome_vetor) == -1) {
+            yyerror("Vetor '" + nome_vetor + "' não foi declarado.");
+        }
+        
+        string tipo_var = pilha[buscarVariavel(nome_vetor)][nome_vetor].tipo;
+        if (tipo_var != "int" || !pilha[buscarVariavel(nome_vetor)][nome_vetor].eh_vetor) {
+            yyerror("'" + nome_vetor + "' não é um vetor de inteiros.");
+        }
+        
+        stringstream ss;
+        string endereco_vetor = pilha[buscarVariavel(nome_vetor)][nome_vetor].endereco_memoria;
+        
+        ss << qtdTab() << "quick_sort_completo(" << endereco_vetor << ", " << tamanho << ");\n";
+        
+        $$.traducao = ss.str();
     }
 ;
 
