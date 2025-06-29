@@ -1,7 +1,10 @@
-
+set set{
+        int x;
+        int y;
+};
 
 int main() {
-    teste haduken;
+    set haduken;
     int resultado;
 
     haduken.x = 1;
@@ -10,8 +13,3 @@ int main() {
     resultado = haduken.x + haduken.y;
     output(resultado);
 }
-
-set teste{
-        int x;
-        int y;
-};
