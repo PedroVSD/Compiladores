@@ -41,6 +41,8 @@ ID {LETRA}({LETRA}|{DIGITO})*
 "default"   { return TK_DEFAULT; }
 "imprimir_vetor"  { return TK_IMPRIMIR_VETOR; }
 "quicksort"       { return TK_QUICKSORT; }
+"set"       { return TK_CONJUNTO; } // set é a struct
+"."     { return TK_PONTO; } // ponto para acessar membros da struct
 
 "true"      {
 	yylval.traducao = "true";

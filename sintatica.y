@@ -13,6 +13,13 @@
 
 using namespace std;
 
+// Estrutura para armazenar a definição de um conjunto (struct)
+// Mapeia o nome de um membro para o seu tipo (ex: "x" -> "int")
+typedef map<string, string> MembrosConjunto;
+
+// Tabela global para armazenar todas as definições de conjuntos
+// Mapeia o nome de um conjunto para a estrutura de seus membros
+map<string, MembrosConjunto> definicoesConjunto;
 
 // Declaração de funções
 
@@ -78,6 +85,7 @@ struct tabela{
     int numero;                 // Se for um numero, guarda o valor numérico
 	bool contador;  //?
 	bool malocada; //?
+    bool eh_set;                // Indica se é um conjunto (struct)
 };
 
 struct RotulosDeLaço {
@@ -137,6 +145,7 @@ string novoRotulo() {
 %token TK_ESCREVA TK_LEIA
 %token TK_SWITCH TK_CASE TK_DEFAULT
 %token TK_IMPRIMIR_VETOR TK_QUICKSORT
+%token TK_CONJUNTO TK_PONTO //Tokens para a struct
 
 %start S
 
@@ -460,11 +469,59 @@ DECLARACAO:
 		}
         $$.traducao = $1.traducao;
       }
+      | DEFINIR_CONJUNTO DECLARACAO{ //Linhas 472 até 474 são referentes a definição de conjuntos
+        $$.traducao = $1.traducao + $2.traducao;
+      }
 	  | 
 	  {
 		$$.traducao = "";
 	  }
 ;
+//480 até 565 são as regras o conjunto (struct)
+// NOVA REGRA PARA DEFINIR UM CONJUNTO (gera a struct em C)
+DEFINIR_CONJUNTO:
+    TK_CONJUNTO TK_ID '{' LISTA_MEMBROS '}' ';' {
+        string nomeConjunto = $2.label;
+        if (definicoesConjunto.count(nomeConjunto)) {
+            yyerror("Conjunto '" + nomeConjunto + "' ja foi definido.");
+        }
+        
+        // $4.label contém os nomes dos membros e $4.traducao os tipos, separados por '|'
+        stringstream ss_nomes($4.label);
+        stringstream ss_tipos($4.traducao);
+        string nomeMembro, tipoMembro;
+        MembrosConjunto membros;
+
+        while(getline(ss_nomes, nomeMembro, '|') && getline(ss_tipos, tipoMembro, '|')) {
+            if (!nomeMembro.empty()) {
+                membros[nomeMembro] = tipoMembro;
+            }
+        }
+        definicoesConjunto[nomeConjunto] = membros;
+
+        // Geração do código C para a struct (isso vai para o topo do resultado.c)
+        stringstream ss_code;
+        ss_code << "struct " << nomeConjunto << " {\n";
+        for(auto const& [membro, tipo] : membros) {
+            ss_code << "\t" << tipoTraducao[tipo] << " " << membro << ";\n";
+        }
+        ss_code << "};\n\n";
+        $$.traducao = ss_code.str();
+    }
+;
+
+// NOVA REGRA PARA LISTAR OS MEMBROS DENTRO DE UM CONJUNTO
+LISTA_MEMBROS:
+    TIPO TK_ID ';' LISTA_MEMBROS {
+        $$.label = $2.label + "|" + $4.label;
+        $$.traducao = $1.label + "|" + $4.traducao;
+    }
+    | /* vazio */ {
+        $$.label = "";
+        $$.traducao = "";
+    }
+;// NOVA REGRA PARA DEFINIR UM CONJUNTO (gera a struct em C)
+
 
 TIPO:
       TK_TIPO_INT   { $$.label = "int"; }
@@ -572,6 +629,22 @@ DECLAR_VAR:
         ss << qtdTab() << temp2 << " = " << pilha[buscarVariavel(linha)][linha].endereco_memoria << " * " << tipoTamanho[tipo_elemento] << ";\n";
         ss << qtdTab() << endereco << " = (" << tipoTraducao[tipo_elemento] << "*)malloc(" << temp2 << ");\n";
         $$.traducao = ss.str();
+    }
+    | TK_ID TK_ID { // Definição o conjunto Ex: Ponto p1; (onde Ponto é um conjunto já definido)
+        string nomeConjunto = $1.label;
+        string nomeVariavel = $2.label;
+
+        if (!definicoesConjunto.count(nomeConjunto)) {
+            // Se não for um conjunto definido, pode ser um erro ou outra regra.
+            // O Bison/Yacc tentará outras alternativas. Se nenhuma funcionar, dará erro.
+            // Para ser mais explícito, você pode deixar esta regra mais específica se necessário.
+            yyerror("Tipo '" + nomeConjunto + "' nao e um tipo de conjunto definido.");
+        }
+        
+        int dimensoes[] = {0, 0};
+        adicionaVar(nomeVariavel, nomeConjunto, 0, dimensoes, false, false);
+        pilha.back()[nomeVariavel].eh_set = true; // Marca como conjunto
+        $$.traducao = ""; // A declaração será feita por fecharPilha()
     }
 ;
 
@@ -692,6 +765,33 @@ ATRIB:
         ss << qtdTab() << temp2 << " = " << temp << " + " << pilha[buscarVariavel(idx_coluna)][idx_coluna].endereco_memoria << ";\n";
         ss << qtdTab() << pilha[buscarVariavel(nome)][nome].endereco_memoria << "[" << temp2 << "] = " << $9.label << ";\n"; // Atribuição ao elemento da matriz
 
+        $$.traducao = ss.str();
+    }
+    // NOVA REGRA PARA ATRIBUIÇÃO A MEMBRO DE CONJUNTO
+    | TK_ID TK_PONTO TK_ID '=' EXPR {
+        string nomeVariavel = $1.label;
+        string nomeMembro = $3.label;
+        int idx = buscarVariavel(nomeVariavel);
+
+        // Validações
+        if (idx == -1) { yyerror("Variavel '" + nomeVariavel + "' nao declarada."); }
+        if (!pilha[idx][nomeVariavel].eh_set) { yyerror("Variavel '" + nomeVariavel + "' nao e um conjunto."); }
+        
+        string tipoConjunto = pilha[idx][nomeVariavel].tipo;
+        if (!definicoesConjunto[tipoConjunto].count(nomeMembro)) {
+            yyerror("Conjunto '" + tipoConjunto + "' nao tem o membro '" + nomeMembro + "'.");
+        }
+
+        // Geração de código 3AC
+        stringstream ss;
+        ss << $5.traducao; // 1. Gera o código para a expressão da direita (EXPR)
+        
+        string enderecoVar = pilha[idx][nomeVariavel].endereco_memoria;
+        string enderecoExpr = pilha[buscarVariavel($5.label)][$5.label].endereco_memoria;
+        
+        // 2. Gera a atribuição final
+        ss << qtdTab() << enderecoVar << "." << nomeMembro << " = " << enderecoExpr << ";\n";
+        
         $$.traducao = ss.str();
     }
 ;
@@ -1338,6 +1438,35 @@ EXPR_ATOM:
         $$.traducao = ss.str();
         $$.label = temp2;
     }
+    // NOVA REGRA PARA ACESSAR UM MEMBRO DE CONJUNTO
+    | TK_ID TK_PONTO TK_ID {
+        string nomeVariavel = $1.label;
+        string nomeMembro = $3.label;
+        int idx = buscarVariavel(nomeVariavel);
+
+        // Validações
+        if (idx == -1) { yyerror("Variavel '" + nomeVariavel + "' nao declarada."); }
+        if (!pilha[idx][nomeVariavel].eh_set) { yyerror("Variavel '" + nomeVariavel + "' nao e um conjunto."); }
+
+        string tipoConjunto = pilha[idx][nomeVariavel].tipo;
+        if (!definicoesConjunto[tipoConjunto].count(nomeMembro)) {
+            yyerror("Conjunto '" + tipoConjunto + "' nao tem o membro '" + nomeMembro + "'.");
+        }
+
+        // Geração de código 3AC
+        string tipoMembro = definicoesConjunto[tipoConjunto][nomeMembro];
+        string temp = newTemp(tipoMembro); // 1. Cria uma nova variável temporária
+        
+        string enderecoVar = pilha[idx][nomeVariavel].endereco_memoria;
+        string enderecoTemp = pilha.back()[temp].endereco_memoria;
+
+        stringstream ss;
+        // 2. Gera a atribuição do membro para a temporária
+        ss << qtdTab() << enderecoTemp << " = " << enderecoVar << "." << nomeMembro << ";\n";
+        
+        $$.label = temp; // O resultado desta expressão é a nova temporária
+        $$.traducao = ss.str();
+    }
 ;
 COVERT_TYPE:
     TK_TIPO_INT '(' EXPR ')' {
@@ -1444,7 +1573,9 @@ stringstream fecharPilha(stringstream& frees) {
 			if(info.temporaria)
 				ss << qtdTab() << tipoTraducao[info.tipo] <<" "<< info.endereco_memoria << ";\n";
 			else{
-                if(info.num_dimensoes == 0)
+                if (info.eh_set) { // <-- ADICIONE ESTA CONDIÇÃO
+                    ss << qtdTab() << "struct " << info.tipo << " " << info.endereco_memoria << ";\t //" << nome << "\n";
+            } else if (info.num_dimensoes == 0)
 				    ss << qtdTab() << tipoTraducao[info.tipo] <<" "<< info.endereco_memoria << ";\t //"<< nome << "\n";
                 else
                     ss << qtdTab() << tipoTraducao[info.tipo] <<"* "<< info.endereco_memoria << ";\t //"<< nome << "\n";
