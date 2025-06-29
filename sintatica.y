@@ -13,16 +13,35 @@
 
 using namespace std;
 
+
 // Declaração de funções
-void adicionaVar(string nome, string tipo, bool temp = false, bool eh_vetor = false, int tamanho = 0, bool eh_matriz = false, int linhas = 0, int colunas = 0, bool contador = false, bool malocada = false);
-stringstream veririficarTipo(string var1, string operador, string var2 = "");
+
+//Grupo da funções que mexem em Variáveis
+void adicionaVar(string nome, string tipo, int d, int N_d[2], bool temp = false, bool contador = false);
+string newTemp(string tipo, bool contador = false, bool malocada = false);
+int buscarVariavel(string nome);
+stringstream veririficarTipo(string nome, string op, string valor);
+
+// Grupo de funções que mexem com a pilha
 void criarPilha();
 void addPilhaLaco(string b, string c);
 stringstream fecharPilha();
 stringstream fecharPilha(stringstream& ss);
-int buscarVariavel(string nome);
+
+// Grupo de funções auxiliares
 string qtdTab(int dif = 0);
 string generateSwitchCases(string caseData, string switchVar, string switchId); 
+
+//Grupo de funcões prontas
+stringstream addFuncao(int num);
+/*  
+    1- Len
+    2- input_string
+    3- input_bool
+
+*/
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Contadores globais
 int tempVar = 0;
@@ -32,11 +51,16 @@ int defgoto = 0;
 int tempElse = 0;
 string current_switch_var = "";
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Flag para gerar a funções
 bool atribuicaoGlobal = false;
-bool precisa_get_length = false;
-bool precisa_input_string = false;
-bool precisa_input_bool = false;
+bool len = false;
+bool inputString = false;
+bool inputBool = false;
+bool outputBool = false;
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct atributos {
 	string label;
@@ -45,16 +69,15 @@ struct atributos {
 
 // Estrutura para armazenar informações de variáveis
 struct tabela{
-	string tipo;
-	string endereco_memoria;
-	bool eh_vetor;         // Flag para sabermos que é um vetor
-	int tamanho_vetor;     // Tamanho do vetor
-	bool eh_matriz;        // Uma flag para sabermos que é uma matriz
-    int num_linhas;        // Dimensão de linhas
-    int num_colunas;       // Dimensão de colunas (o 'm' da sua fórmula)
-	bool temporaria;
-	bool contador;
-	bool malocada;
+	string tipo;                // Tipo da variável (int, float, char, bool, string)
+	string endereco_memoria;    // Apelido
+    int num_dimensoes;          // 0 = escalar, 1 = vetor, 2 = matriz
+    int dimensoes[2];           // [0] = tamanho do vetor/linhas, [1] = colunas (se matriz)
+    bool inicializado;          // Indica se a variável foi inicializada
+    bool temporaria;            // Indica se é uma variável temporária
+    int numero;                 // Se for um numero, guarda o valor numérico
+	bool contador;  //?
+	bool malocada; //?
 };
 
 struct RotulosDeLaço {
@@ -84,6 +107,13 @@ map<string, string> tipomascara{
 	{"bool", "%d"},
 	{"string", "%s"}
 };
+map<string, int> tipoTamanho = {
+    {"int", sizeof(int)},
+    {"float", sizeof(float)},
+    {"char", sizeof(char)},
+    {"bool", sizeof(bool)},
+    {"string", sizeof(char)}
+};
 
 
 extern int numLinha;
@@ -94,22 +124,10 @@ string novoRotulo() {
     return "L" + to_string(defgoto++);
 }
 
-string novaTemp(string tipo) {
-    // 1. Cria uma chave única para a tabela de símbolos (ex: "t_auto_10")
-    string chave_temp = "t_auto_" + to_string(tempVar);
-
-    // 2. Adiciona a variável na tabela de símbolos usando sua função existente.
-    // Assinatura: adicionaVar(nome, tipo, temp, eh_vetor, tamanho, etc...)
-    adicionaVar(chave_temp, tipo, true, false, 0, false, 0, 0, false, false);
-
-    // 3. Retorna o nome C gerado (ex: "t10"), que está em 'endereco_memoria'.
-    return pilha.back()[chave_temp].endereco_memoria;
-}
-
 %}
 
 %token TK_NUM TK_ID TK_TIPO_INT TK_TIPO_FLOAT TK_MAIN
-%token TK_TIPO_CHAR TK_TIPO_BOOL
+%token TK_TIPO_CHAR TK_TIPO_BOOL TK_IDX
 %token TK_IGUAL TK_DIFERENTE TK_MAIOR_IGUAL TK_MENOR_IGUAL
 %token TK_AND TK_OR
 %token TK_CHAR TK_BOOL_TRUE TK_BOOL_FALSE
@@ -142,82 +160,9 @@ S:
 		cout << "#include\"algoritmos/quicksort.h\"\n\n";
 
         // Mudei o nome da sua função 'Len' para 'get_string_length' para consistência
-        if (precisa_get_length) {
-            cout << "\nint Len(const char* str) {\n"
-                 << "    int len;\n	int f0;\n	int f1;\n	int f2;\n\n"
-                 << "    len = 0;\n"
-                 << "    f0 = (str == NULL);\n"
-                 << "    if (f0) goto loop_end_len;\n"
-                 << "loop_start_len:\n"
-                 << "    f1 = str[len];\n"
-                 << "    f2 = (f1 == '\\0');\n" // Usei f1 aqui para estilo 3-endereços
-                 << "    if (f2) goto loop_end_len;\n"
-                 << "    len = len + 1;\n"
-                 << "    goto loop_start_len;\n"
-                 << "loop_end_len:;\n" // Adicionado ; para sintaxe C sempre válida
-                 << "    return len;\n"
-                 << "}\n\n";
-        }
-		if (precisa_input_string) {
-            cout << "\n// Le uma string da entrada ate o espaco ou nova linha\n";
-            cout << "char* input_string() {\n"
-			     << "    int scanf_result;\n	int flag_is_terminator;\n	int flag_is_newline;\n	int flag_is_space;\n 	int flag_is_full;\n"
-                 << "    char c;\n"
-				 << "    char* buffer;\n"
-				 << " 	int len;\n"                 
-				 << "    int capacity;\n	capacity = 16;\n"
-                 << "    len = 0;\n"
-                 << "    buffer = (char*)malloc(capacity);\n"
-                 << "\n"
-                 << "input_str_loop_start:\n"
-                 << "    scanf_result = scanf(\"%c\", &c);\n"
-                 << "    flag_is_terminator = scanf_result != 1;\n"
-                 << "    if (flag_is_terminator) goto input_str_loop_end;\n"
-                 << "    flag_is_newline = c == '\\n';\n"
-                 << "    flag_is_space = c == ' ';\n"
-                 << "    flag_is_terminator = flag_is_newline || flag_is_space;\n"
-                 << "    if (flag_is_terminator) goto input_str_loop_end;\n"
-                 << "\n"
-                 << "    buffer[len] = c;\n"
-                 << "    len = len + 1;\n"
-                 << "\n"
-                 << "    flag_is_full = len >= capacity;\n"
-                 << "    if (!flag_is_full) goto input_str_loop_start;\n"
-                 << "\n"
-                 << "    capacity = capacity * 2;\n"
-                 << "    buffer = (char*)realloc(buffer, capacity);\n"
-                 << "    goto input_str_loop_start;\n"
-                 << "\n"
-                 << "input_str_loop_end:;\n"
-                 << "    buffer[len] = '\\0';\n"
-                 << "    return buffer;\n"
-                 << "}\n\n";
-        }
-		 if(precisa_input_bool) {
-            cout << "\n// Le um valor booleano da entrada (true ou outra coisa)\n";
-            cout << "int input_bool() {\n"
-                 << "    char c;\n"
-                 << "    int aux;\n"
-                 << "    // Ignora espacos em branco antes de ler\n"
-                 << "    do { scanf(\"%c\", &c); } while (c == ' ' || c == '\\n');\n\n"
-                 << "    // Checa a palavra 'true'\n"
-                 << "    aux = c == 't';\n"
-                 << "    if (!aux) goto input_bool_false;\n"
-                 << "    scanf(\"%c\", &c);\n"
-                 << "    aux = c == 'r';\n"
-                 << "    if (!aux) goto input_bool_false;\n"
-                 << "    scanf(\"%c\", &c);\n"
-                 << "    aux = c == 'u';\n"
-                 << "    if (!aux) goto input_bool_false;\n"
-                 << "    scanf(\"%c\", &c);\n"
-                 << "    aux = c == 'e';\n"
-                 << "    if (!aux) goto input_bool_false;\n"
-                 << "    return 1; // 'true' foi lido\n\n"
-                 << "input_bool_false:\n"
-                 << "    // Qualquer outra coisa é considerada 'false'\n"
-                 << "    return 0;\n"
-                 << "}\n\n";
-        }
+        if (len) cout << addFuncao(1).str();
+		if (inputString) cout << addFuncao(2).str();
+		if(inputBool)  cout << addFuncao(3).str();
 
         // Imprime o resto do código
         cout << fecharPilha().str();        
@@ -262,59 +207,45 @@ MAIN:
 ;
 
 BLOCO: { criarPilha(); } '{' COMANDOS '}' {
-    stringstream ss;
-    ss << qtdTab(-1) << "{\n"; // 1. Abre o escopo C
+	stringstream ss, free;
 
-    // 2. GERA AS DECLARAÇÕES DE VARIÁVEIS (VERSÃO CORRIGIDA)
-    ss << qtdTab() << "/* Declaracoes para este escopo */\n";
-    for(const auto& [nome, info] : pilha.back()) {
-        
-        string tipo_c = tipoTraducao[info.tipo]; // Pega o tipo base (ex: "int", "char*")
-        
-        // Se for um vetor ou matriz, garante que é um ponteiro adicionando '*'
-        if (info.eh_vetor || info.eh_matriz) {
-            tipo_c += "*";
-        }
+	// Declarações das variáveis
+	string decls;
 
-        ss << qtdTab() << tipo_c << " " << info.endereco_memoria;
+	// se estivermos dentro de um loop, jogamos o decls na nova pilha do topo
+	tabela_simbolos topPilha;
+	if(pilhaDeRotulosDeLaços.size() > 0) {
+		topPilha = pilha.back();
+		fecharPilha(free);
+	}
+	else {
+		decls = fecharPilha(free).str();
+	}
+	// juntar a tabela de símbolos do topo com a tabela de símbolos do bloco
+	
+	if(pilhaDeRotulosDeLaços.size() > 0) {
+		pilha.back().insert(topPilha.begin(), topPilha.end());
+	}
 
-        // Boa prática: inicializa todos os ponteiros (strings e matrizes) com NULL
-        if (tipo_c.find('*') != string::npos) {
-            ss << " = NULL;";
-        } else {
-            ss << ";";
-        }
-        
-        if (!info.temporaria) {
-            ss << "\t//" << nome; // Comenta o nome original
-        }
-        ss << "\n";
-    }
-    ss << "\n"; 
 
-    // 3. GERA O CÓDIGO DOS COMANDOS
+
+	if(defbloco == 1 && atribuicaoGlobal){ss << qtdTab(1) << "D();\n";  }
+	ss << decls;
+
+	if(!decls.empty() && !$3.traducao.empty()) {
+		ss << "\n";
+	}
+
+	// Comandos dentro do bloco
     ss << $3.traducao;
 
-    // 4. GERA OS 'free()' NO FINAL DO ESCOPO (Sua lógica aqui já está ótima)
-    ss << "\n" << qtdTab() << "/* Liberando memoria alocada neste escopo */\n";
-    for(const auto& [nome, info] : pilha.back()) {
-        if (info.malocada) {
-            ss << qtdTab() << "if (" << info.endereco_memoria << " != NULL) free(" << info.endereco_memoria << ");\n";
-        }
-    }
-    
-    // 5. Adiciona o 'return 0' apenas se for o bloco principal
-    if(defbloco == 1) { 
-        ss << "\n" << qtdTab() << "return 0;\n"; 
-    }
+	// Se o bloco for o principal, adiciona retorno
+	if(defbloco == 1) { 
+		ss << "\n" << qtdTab(1) << free.str();	
+		ss << "\n" << qtdTab(1) << "return 0;\n"; 
+	}
 
-    ss << qtdTab(-1) << "}\n"; // 6. Fecha o escopo C
-
-    // 7. DESTRÓI O ESCOPO DA TABELA DE SÍMBOLOS
-    defbloco--;
-    pilha.pop_back();
-
-    $$.traducao = ss.str();
+	$$.traducao = ss.str();
 }
 ;
 
@@ -336,28 +267,8 @@ COMANDO:
 	| { criarPilha(); } COND_IF 		{ $$.traducao = $2.traducao; }
 	| COMANDO_SAIDA ';'   { $$.traducao = $1.traducao; }
     | COMANDO_ENTRADA ';' { $$.traducao = $1.traducao; }
-	| FUNCOES_VETOR ';'   { $$.traducao = $1.traducao; }
+	//| FUNCOES_VETOR ';'   { $$.traducao = $1.traducao; }
     | SWITCH_STMT       { $$.traducao = $1.traducao; }
-    | TK_BREAK ';' { 
-        if (pilhaDeRotulosDeLaços.empty()) {
-            yyerror("'break' fora de um laco ou switch");
-        }
-        stringstream ss;
-        ss << qtdTab() << "goto " << pilhaDeRotulosDeLaços.back().rotuloBreak << ";\n";
-        $$.traducao = ss.str();
-    }
-    | TK_CONTINUE ';' { 
-        if (pilhaDeRotulosDeLaços.empty()) {
-            yyerror("'continue' fora de um laco");
-        }
-        // Adicione aqui a checagem se o alvo do continue é para switch, se necessário
-        if (pilhaDeRotulosDeLaços.back().rotuloContinue.find("EndSwitch") != string::npos) {
-             yyerror("'continue' invalido dentro de um switch");
-        }
-        stringstream ss;
-        ss << qtdTab() << "goto " << pilhaDeRotulosDeLaços.back().rotuloContinue << ";\n";
-        $$.traducao = ss.str();
-    }
 ;
 
 COMANDO_SAIDA:
@@ -407,7 +318,7 @@ COMANDO_ENTRADA:
 ;
 
 
-FUNCOES_VETOR:
+/*FUNCOES_VETOR:
     TK_IMPRIMIR_VETOR '(' TK_ID ',' TK_NUM ')' {
         string nome_vetor = $3.label;
 		string tipo = pilha[buscarVariavel(nome_vetor)][nome_vetor].tipo;
@@ -489,7 +400,7 @@ FUNCOES_VETOR:
         
         $$.traducao = ss.str();
     }
-;
+;*/
 
 LISTA_VARIAVEIS:
     TK_ID {
@@ -501,11 +412,11 @@ LISTA_VARIAVEIS:
         
         stringstream ss_code;
         if (tipo == "string") {
-            precisa_input_string = true; 
+            inputString = true; 
             ss_code << qtdTab() << c_nome << " = input_string();\n";
 		}
 		else if (tipo == "bool") {
-			precisa_input_bool = true; 
+			inputBool = true; 
 			ss_code << qtdTab() << c_nome << " = input_bool();\n";
 			}
         else {
@@ -525,12 +436,12 @@ LISTA_VARIAVEIS:
         stringstream ss_code;
 
         if (tipo == "string") {
-            precisa_input_string = true; 
+            inputString = true; 
 			pilha[idx][c_nome].malocada = true; // Marca que a string foi alocada dinamicamente
             ss_code << qtdTab() << c_nome << " = input_string();\n";
 		}
 		else if (tipo == "bool") {
-			precisa_input_bool = true;
+			inputBool = true;
 			ss_code << qtdTab() << c_nome << " = input_bool();\n";
 			}
         else {
@@ -560,102 +471,111 @@ TIPO:
     | TK_TIPO_FLOAT { $$.label = "float"; }
     | TK_TIPO_CHAR  { $$.label = "char"; }
     | TK_TIPO_BOOL  { $$.label = "bool"; }
-	| TK_TIPO_STRING { $$.label = "string"; } // <<< ADICIONE ESTA ALTERNATIVA
+	| TK_TIPO_STRING { $$.label = "string"; }
 ;
 
 DECLAR_VAR:
-    // Alternativa para declaração de variável simples (ex: int x;)
     TIPO TK_ID {
-        adicionaVar($2.label, $1.label, false, false, 0, false, 0, 0, false, false);
+        string nome = $2.label;
+        string tipo = $1.label;
+        int dimensoes[] = {0, 0}; // Inicializa dimensões como 0
+        adicionaVar(nome, tipo, 0, dimensoes, false, false);
         $$.traducao = "";
-    }
-    
-    // Alternativa para variável com inicialização (ex: int x = 5;)
+    }   
     | TIPO TK_ID '=' EXPR {
-        adicionaVar($2.label, $1.label, false, false, 0, false, 0, 0, false, false);
+        string nome = $2.label;
+        string tipo = $1.label;
+        int dimensoes[] = {0, 0}; // Inicializa dimensões como 0
+        adicionaVar(nome, tipo, 0, dimensoes, false, false);
+        pilha[pilha.size()-1][nome].inicializado = true;
         stringstream ss;
         ss = veririficarTipo($2.label, "=", $4.label);
         $$.traducao = $4.traducao + ss.str();
     }
-    
-    // Alternativa para variável char com inicialização de literal
     | TIPO TK_ID '=' TK_CHAR {
-        adicionaVar($2.label, $1.label, false, false, 0, false, 0, 0, false, false);
-        if ($1.label != "char") { 
-            yyerror("Atribuicao de literal char a tipo nao-char."); 
-        }
+        string nome = $2.label;
+        string tipo = $1.label;
+        int dimensoes[] = {0, 0}; // Inicializa dimensões como 0
+        adicionaVar(nome, tipo, 0, dimensoes, false, false);
+        if(tipo != "char") {
+            cout << "Atribuindo char a variavel '" << nome << "' do tipo '" << tipo << "'\n";
+            exit(1);}
+        pilha[pilha.size()-1][nome].inicializado = true; 
         stringstream ss;
-        ss << qtdTab() << pilha[pilha.size()-1][$2.label].endereco_memoria << " = " << $4.label << ";\n";
+        ss << qtdTab() << pilha[pilha.size()-1][nome].endereco_memoria << " = " << $4.label << ";\n";
         $$.traducao = ss.str();
     }
-
-    // >>> NOVA ALTERNATIVA PARA DECLARAÇÃO DE VETOR <<<
-    | TIPO TK_ID '[' TK_NUM ']' {
-        // 1. Obtém as informações da declaração
+    | TIPO TK_ID '[' EXPR ']' {
         string tipo_elemento = $1.label;
         string nome_vetor = $2.label;
-        int tamanho = stoi($4.traducao);
-
-        // 2. Adiciona o vetor à tabela de símbolos
-        adicionaVar(nome_vetor, tipo_elemento, false, true, tamanho, false, 0, 0, false, true);
-
-        // 3. Gera o código C para alocar a memória
-        stringstream ss_code;
-        string c_nome_vetor = pilha[buscarVariavel(nome_vetor)][nome_vetor].endereco_memoria;
-        
-        ss_code << qtdTab() << c_nome_vetor << " = (" << tipoTraducao[tipo_elemento] << "*)malloc(" 
-                << tamanho << " * sizeof(" << tipoTraducao[tipo_elemento] << "));\n";
-        ss_code << qtdTab() << "if (" << c_nome_vetor << " == NULL) { fprintf(stderr, \"Falha ao alocar memoria para o vetor!\\n\"); exit(1); }\n";
-
-        $$.traducao = ss_code.str();
-    }
-
-    // <<< NOVA ALTERNATIVA PARA DECLARAÇÃO DE MATRIZ >>>
-    | TIPO TK_ID '[' TK_NUM ']' '[' TK_NUM ']' {
-        // WORKAROUND: O parser está capturando incorretamente os números
-        // Vamos assumir valores corretos por enquanto e implementar a lógica do offset
-        
-        string tipo_elemento = $1.label;
-        string nome_matriz = $2.label;
-        
-        // Extrair as dimensões das expressões
-        // IMPORTANTE: Por agora assumimos que são literais inteiros
-        int linhas, colunas;
-        
-        // Tentar extrair o valor literal das dimensões
-        // Se $4.label e $7.label são números literais (como "4"), converter para int
-        if (isdigit($4.label[0]) && isdigit($7.label[0])) {
-            linhas = atoi($4.label.c_str());
-            colunas = atoi($7.label.c_str());
-        } else {
-            // Se não conseguir converter, usar valores padrão e dar aviso
-            linhas = 2;
-            colunas = 3;
+        string tamanho = $4.label;
+        int dimensoes[] = {pilha[buscarVariavel(tamanho)][tamanho].numero, 0}; // Inicializa dimensões como vetor de 1 dimensão
+        adicionaVar(nome_vetor, tipo_elemento, 1, dimensoes, false, false);
+        // Verificações
+        if(pilha[buscarVariavel(tamanho)][tamanho].tipo != "int") {
+            cout << "Tamanho do vetor '" << nome_vetor << "' deve ser um inteiro.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel(tamanho)][tamanho].inicializado == false){
+            cout << "Tamanho do vetor '" << tamanho << "' deve ser inicializado.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel(tamanho)][tamanho].num_dimensoes > 0) {
+            cout << tamanho << " ja foi declarado como vetor ou matriz.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel(tamanho)][tamanho].numero < 1){
+            cout << "Vetor '" << nome_vetor << "' nao pode ser negativo ou nulo.\n";
+            exit(1);
         }
 
-        // 2. Adiciona a matriz à tabela de símbolos
-        adicionaVar(nome_matriz, tipo_elemento, false, false, 0, true, linhas, colunas, false, true);
+        stringstream ss;
+        string endereco = pilha[buscarVariavel(nome_vetor)][nome_vetor].endereco_memoria;
+        string temp = newTemp("int");
+        if(tipo_elemento == "string") tipo_elemento = "char"; 
+        ss << qtdTab() << temp << " = " << tamanho << " * " << tipoTamanho[tipo_elemento] << ";\n";
+        ss << qtdTab() << endereco << " = (" << tipoTraducao[tipo_elemento] << "*)malloc(" << temp << ");\n";
 
-        // 3. Gera o código C para alocar a memória
-        stringstream ss_code;
-        string c_nome_matriz = pilha[buscarVariavel(nome_matriz)][nome_matriz].endereco_memoria;
-        
-        // Gera o código em estilo 3-endereços para o malloc
-        string chave_temp_total = "t_total_size_" + to_string(tempVar);
-        adicionaVar(chave_temp_total, "int", true, false, 0, false, 0, 0, false, false);
-        string c_nome_total = pilha[pilha.size()-1][chave_temp_total].endereco_memoria;
-
-        ss_code << qtdTab() << c_nome_total << " = " << linhas << " * " << colunas << ";\n";
-        ss_code << qtdTab() << c_nome_matriz << " = (" << tipoTraducao[tipo_elemento] << "*)malloc(" 
-                << c_nome_total << " * sizeof(" << tipoTraducao[tipo_elemento] << "));\n";
-        ss_code << qtdTab() << "if (" << c_nome_matriz << " == NULL) { fprintf(stderr, \"Falha ao alocar memoria para a matriz!\\n\"); exit(1); }\n";
-
-        $$.traducao = ss_code.str();
+        $$.traducao = ss.str();
     }
-; // <-- O ponto e vírgula final encerra TODAS as alternativas de DECLAR_VAR
+    | TIPO TK_ID '[' EXPR ']' '[' EXPR ']' {        
+        string tipo_elemento = $1.label;
+        string nome_matriz = $2.label;
+        string linha = $4.label;
+        string colunas = $7.label;
+        int dimensoes[] = {pilha[buscarVariavel(linha)][linha].numero, pilha[buscarVariavel(colunas)][colunas].numero}; // Inicializa dimensões como matriz de 2 dimensões
+        adicionaVar(nome_matriz, tipo_elemento, 2, dimensoes, false, false);
+        // Verificações
+        if(pilha[buscarVariavel(linha)][linha].tipo != "int" || pilha[buscarVariavel(colunas)][colunas].tipo != "int") {
+            cout << "Tamanho da matriz '" << nome_matriz << "' deve ser um inteiro.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel(linha)][linha].inicializado == false || pilha[buscarVariavel(colunas)][colunas].inicializado == false) {
+            cout << "Tamanho da matriz '" << nome_matriz << "' deve ser inicializado.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel(linha)][linha].num_dimensoes > 0 || pilha[buscarVariavel(colunas)][colunas].num_dimensoes > 0) {
+            cout << linha << " ou " << colunas << " ja foi declarado como vetor ou matriz.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel(linha)][linha].numero < 1 || pilha[buscarVariavel(colunas)][colunas].numero < 1) {
+            cout << "Matriz '" << nome_matriz << "' nao pode ter dimensoes negativas ou nulas.\n";
+            exit(1);
+        }
+      
+        stringstream ss;
+        string endereco = pilha[buscarVariavel(nome_matriz)][nome_matriz].endereco_memoria;   
+        string temp1 = newTemp("int");
+        string temp2 = newTemp("int");
+        if(tipo_elemento == "string") tipo_elemento = "char";
+        ss << qtdTab() << temp1 << " = " << pilha[buscarVariavel(linha)][linha].endereco_memoria << " * " << pilha[buscarVariavel(colunas)][colunas].endereco_memoria << ";\n";
+        ss << qtdTab() << temp2 << " = " << pilha[buscarVariavel(linha)][linha].endereco_memoria << " * " << tipoTamanho[tipo_elemento] << ";\n";
+        ss << qtdTab() << endereco << " = (" << tipoTraducao[tipo_elemento] << "*)malloc(" << temp2 << ");\n";
+        $$.traducao = ss.str();
+    }
+;
 
 ATRIB:
-    // Sua regra existente para atribuição a variáveis simples
     TK_ID '=' EXPR {
         if (buscarVariavel($1.label) == -1) { 
             yyerror("Variavel '" + $1.label + "' nao declarada."); 
@@ -665,107 +585,114 @@ ATRIB:
         $$.traducao = $3.traducao + ss.str();
     }
 
-   // >>> NOVA REGRA PARA ATRIBUIÇÃO A VETOR <<<
    | TK_ID '[' EXPR ']' '=' EXPR {
-        // 1. Validar que o vetor existe
-        int idx_vetor = buscarVariavel($1.label);
-        if (idx_vetor == -1) { yyerror("Vetor '" + $1.label + "' nao declarado."); }
-        if (!pilha[idx_vetor][$1.label].eh_vetor) { yyerror("Variavel '" + $1.label + "' nao e um vetor."); }
 
-        // 2. Pegar informações do vetor
-        string c_nome_vetor = pilha[idx_vetor][$1.label].endereco_memoria;
-        string tipo_elemento = pilha[idx_vetor][$1.label].tipo;
+        string nome = $1.label;
+        string tipo1 = pilha[buscarVariavel(nome)][nome].tipo;
         
-        // 3. Gerar código C
-        stringstream ss_code;
-        
-        // Incluir o código das sub-expressões
-        ss_code << $3.traducao; // Código do índice
-        ss_code << $6.traducao; // Código da expressão à direita
-        
-        // Buscar os índices e valor após o código ter sido gerado
-        int idx_indice = buscarVariavel($3.label);
-        int idx_valor = buscarVariavel($6.label);
-        
-        if (idx_indice != -1 && idx_valor != -1) {
-            string c_nome_indice = pilha[idx_indice][$3.label].endereco_memoria;
-            string c_nome_valor = pilha[idx_valor][$6.label].endereco_memoria;
-            
-            // Gerar o código de atribuição
-            ss_code << qtdTab() << c_nome_vetor << "[" << c_nome_indice << "] = " << c_nome_valor << ";\n";
-        } else {
-            ss_code << qtdTab() << "/* Erro: nao foi possivel acessar indice ou valor do vetor */\n";
+        string nome2 = $6.label;
+        string tipo2 = pilha[buscarVariavel(nome2)][nome2].tipo;
+
+
+
+        string idx = $3.label;
+        if (pilha[buscarVariavel(idx)][idx].tipo != "int") {
+            cout << "Indice do vetor '" << nome << "' deve ser um inteiro.\n";
+            exit(1);
         }
+        if (pilha[buscarVariavel(idx)][idx].inicializado == false) {
+            cout << "Indice do vetor '" << nome << "' deve ser inicializado.\n";
+            exit(1);
+        }
+        if (pilha[buscarVariavel(idx)][idx].num_dimensoes > 0) {
+            cout << idx << " ja foi declarado como vetor ou matriz.\n";
+            exit(1);
+        }
+        if (pilha[buscarVariavel(idx)][idx].numero < 0) {
+            cout << "Vetor '" << nome << "' nao pode ter indice negativo.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel(idx)][idx].dimensoes[0] < pilha[buscarVariavel(idx)][idx].numero) {
+            cout << "Indice do vetor '" << nome << "' fora dos limites.\n";
+            exit(1);
+        }
+        if( pilha[buscarVariavel(nome)][nome].num_dimensoes != 1) {
+            cout << "Variavel '" << nome << "' nao e um vetor.\n";
+            exit(1);
+        }
+        if (pilha[buscarVariavel(nome)][nome].tipo != pilha[buscarVariavel(nome2)][nome2].tipo) {
+            cout << "Tipos incompatíveis na atribuição: '" << tipo1 << "' e '" << tipo2 << "'.\n";
+            exit(1);
+        }
+        
+        stringstream ss;
+        
+        ss << $3.traducao; // Código do índice
+        ss << $6.traducao; // Código da expressão à direita
 
-        $$.traducao = ss_code.str();
+        string new_temp = newTemp(tipo1);
+        ss << qtdTab() << new_temp << " = " << idx << ";\n"; // Cria uma temporária para o índice
+        ss << qtdTab() << pilha[buscarVariavel(nome)][nome].endereco_memoria << "[" << new_temp << "] = " << $6.label << ";\n";
+        
+
+        $$.traducao = ss.str();
     }
 
    | TK_ID '[' EXPR ']' '[' EXPR ']' '=' EXPR {
-        // --- ATRIBUIÇÃO A MATRIZ ---
-        // 1. Validar que a matriz existe
-        int idx_matriz = buscarVariavel($1.label);
-        if (idx_matriz == -1) { yyerror("Matriz '" + $1.label + "' nao declarada."); }
-        if (!pilha[idx_matriz][$1.label].eh_matriz) { yyerror("Variavel '" + $1.label + "' nao e uma matriz."); }
+        
+        string nome = $1.label;
+        string tipo1 = pilha[buscarVariavel(nome)][nome].tipo;
 
-        // 2. Pegar informações da matriz
-        string c_nome_matriz = pilha[idx_matriz][$1.label].endereco_memoria;
-        string tipo_elemento = pilha[idx_matriz][$1.label].tipo;
-        int num_colunas = pilha[idx_matriz][$1.label].num_colunas;
-        
-        // 3. Criar temporária para cálculo do offset
-        string chave_temp_offset = "t_offset_" + to_string(tempVar);
-        adicionaVar(chave_temp_offset, "int", true, false, 0, false, 0, 0, false, false);
-        string c_nome_offset = pilha[pilha.size()-1][chave_temp_offset].endereco_memoria;
-        
-        // 4. Gerar código C
-        stringstream ss_code;
+        string nome2 = $8.label;
+        string tipo2 = pilha[buscarVariavel(nome2)][nome2].tipo;
+
+        string idx_linha = $3.label;
+        string idx_coluna = $6.label;
+
+        if (pilha[buscarVariavel(idx_linha)][idx_linha].tipo != "int" || pilha[buscarVariavel(idx_coluna)][idx_coluna].tipo != "int") {
+            cout << "Indices da matriz '" << nome << "' devem ser inteiros.\n";
+            exit(1);
+        }
+        if (pilha[buscarVariavel(idx_linha)][idx_linha].inicializado == false || pilha[buscarVariavel(idx_coluna)][idx_coluna].inicializado == false) {
+            cout << "Indices da matriz '" << nome << "' devem ser inicializados.\n";
+            exit(1);
+        }
+        if (pilha[buscarVariavel(idx_linha)][idx_linha].num_dimensoes > 0 || pilha[buscarVariavel(idx_coluna)][idx_coluna].num_dimensoes > 0) {
+            cout << idx_linha << " ou " << idx_coluna << " ja foi declarado como vetor ou matriz.\n";
+            exit(1);
+        }
+        if (pilha[buscarVariavel(idx_linha)][idx_linha].numero < 0 || pilha[buscarVariavel(idx_coluna)][idx_coluna].numero < 0) {
+            cout << "Matriz '" << nome << "' nao pode ter indices negativos.\n";
+            exit(1);
+        }
+        if (pilha[buscarVariavel(nome)][nome].num_dimensoes != 2) {
+            cout << "Variavel '" << nome << "' nao e uma matriz.\n";
+            exit(1);
+        }
+        if (pilha[buscarVariavel(nome)][nome].tipo != pilha[buscarVariavel(nome2)][nome2].tipo) {
+            cout << "Tipos incompatíveis na atribuição: '" << tipo1 << "' e '" << tipo2 << "'.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel(idx_linha)][idx_linha].numero >= pilha[buscarVariavel(nome)][nome].dimensoes[0] || 
+           pilha[buscarVariavel(idx_coluna)][idx_coluna].numero >= pilha[buscarVariavel(nome)][nome].dimensoes[1]) {
+            cout << "Indices da matriz '" << nome << "' fora dos limites.\n";
+            exit(1);
+        }
+
+        stringstream ss;
         
         // Incluir o código das sub-expressões
-        ss_code << $3.traducao; // Código do primeiro índice (linha)
-        ss_code << $6.traducao; // Código do segundo índice (coluna)
-        ss_code << $9.traducao; // Código da expressão à direita
-        
-        // Buscar os índices e valor após o código ter sido gerado
-        int idx_linha = buscarVariavel($3.label);
-        int idx_coluna = buscarVariavel($6.label);
-        int idx_valor = buscarVariavel($9.label);
-        
-        // SOLUÇÃO ROBUSTA: Se não encontrar como variável, usar como literal
-        string c_nome_linha, c_nome_coluna, c_nome_valor;
-        
-        if (idx_linha != -1) {
-            c_nome_linha = pilha[idx_linha][$3.label].endereco_memoria;
-        } else {
-            // Se não for variável, assumir que é literal - criar temporária
-            string chave_temp_linha = "t_linha_" + to_string(tempVar);
-            adicionaVar(chave_temp_linha, "int", true, false, 0, false, 0, 0, false, false);
-            c_nome_linha = pilha[pilha.size()-1][chave_temp_linha].endereco_memoria;
-            ss_code << qtdTab() << c_nome_linha << " = " << $3.label << ";\n";
-        }
-        
-        if (idx_coluna != -1) {
-            c_nome_coluna = pilha[idx_coluna][$6.label].endereco_memoria;
-        } else {
-            string chave_temp_coluna = "t_coluna_" + to_string(tempVar);
-            adicionaVar(chave_temp_coluna, "int", true, false, 0, false, 0, 0, false, false);
-            c_nome_coluna = pilha[pilha.size()-1][chave_temp_coluna].endereco_memoria;
-            ss_code << qtdTab() << c_nome_coluna << " = " << $6.label << ";\n";
-        }
-        
-        if (idx_valor != -1) {
-            c_nome_valor = pilha[idx_valor][$9.label].endereco_memoria;
-        } else {
-            string chave_temp_valor = "t_valor_" + to_string(tempVar);
-            adicionaVar(chave_temp_valor, "int", true, false, 0, false, 0, 0, false, false);
-            c_nome_valor = pilha[pilha.size()-1][chave_temp_valor].endereco_memoria;
-            ss_code << qtdTab() << c_nome_valor << " = " << $9.label << ";\n";
-        }
-            
-        // Gerar o código de atribuição com cálculo de offset: offset = linha * num_colunas + coluna
-        ss_code << qtdTab() << c_nome_offset << " = " << c_nome_linha << " * " << num_colunas << " + " << c_nome_coluna << ";\n";
-        ss_code << qtdTab() << c_nome_matriz << "[" << c_nome_offset << "] = " << c_nome_valor << ";\n";
+        ss << $3.traducao; // Código do primeiro índice (linha)
+        ss << $6.traducao; // Código do segundo índice (coluna)
+        ss << $9.traducao; // Código da expressão à direita
 
-        $$.traducao = ss_code.str();
+        string temp = newTemp("int"); // Temporária para o cálculo do offset
+        string temp2 = newTemp("int"); // Temporária para o cálculo do offset
+        ss << qtdTab() << temp << " = " << pilha[buscarVariavel(idx_linha)][idx_linha].endereco_memoria << " * " << pilha[buscarVariavel(nome)][nome].dimensoes[1] << ";\n";
+        ss << qtdTab() << temp2 << " = " << temp << " + " << pilha[buscarVariavel(idx_coluna)][idx_coluna].endereco_memoria << ";\n";
+        ss << qtdTab() << pilha[buscarVariavel(nome)][nome].endereco_memoria << "[" << temp2 << "] = " << $9.label << ";\n"; // Atribuição ao elemento da matriz
+
+        $$.traducao = ss.str();
     }
 ;
 
@@ -848,6 +775,26 @@ LOOP:
         ss << qtdTab(1) << "if (" << temp_cond << ") goto " << inícioDoLaço << ";\n";
         ss << qtdTab(1) << fimDoLaço << ":;\n";      // Rótulo para o break
         ss << qtdTab() << "}\n";
+        $$.traducao = ss.str();
+    }
+    | TK_BREAK ';' { 
+        if (pilhaDeRotulosDeLaços.empty()) {
+            yyerror("'break' fora de um laco ou switch");
+        }
+        stringstream ss;
+        ss << qtdTab() << "goto " << pilhaDeRotulosDeLaços.back().rotuloBreak << ";\n";
+        $$.traducao = ss.str();
+    }
+    | TK_CONTINUE ';' { 
+        if (pilhaDeRotulosDeLaços.empty()) {
+            yyerror("'continue' fora de um laco");
+        }
+        // Adicione aqui a checagem se o alvo do continue é para switch, se necessário
+        if (pilhaDeRotulosDeLaços.back().rotuloContinue.find("EndSwitch") != string::npos) {
+             yyerror("'continue' invalido dentro de um switch");
+        }
+        stringstream ss;
+        ss << qtdTab() << "goto " << pilhaDeRotulosDeLaços.back().rotuloContinue << ";\n";
         $$.traducao = ss.str();
     }
 ;
@@ -1083,33 +1030,18 @@ SIMPLE_CASE_LIST:
 
 SIMPLE_CASE:
     TK_CASE TK_NUM ':' COMANDOS {
-        // 1. Obtém o nome C da variável que está no switch (você já a salva globalmente).
-        string switch_var_c_name = current_switch_var;
-
-        // 2. Obtém o valor literal do case diretamente do token.
-        string case_literal_value = $2.traducao;
-
-        // 3. Cria uma temporária APENAS para o resultado da comparação (bool).
-        string chave_temp_comp = "t_case_cmp_" + to_string(tempVar);
-        adicionaVar(chave_temp_comp, "bool", true, false, 0, false, 0, 0, false, false);
-        string c_nome_comp = pilha[pilha.size()-1][chave_temp_comp].endereco_memoria;
-
-        // 4. Cria um rótulo único e seguro para o próximo case.
-        string next_case_label = "NextCase_" + to_string(defgoto);
-        defgoto++; // Incrementa para o próximo case ou if/loop
-
-        // 5. Gera o código C correto.
         stringstream ss;
-        ss << "\n" << qtdTab() << "// case " << case_literal_value << ":\n";
-        // Compara a variável do switch diretamente com o valor literal do case.
-        ss << qtdTab() << c_nome_comp << " = " << switch_var_c_name << " == " << case_literal_value << ";\n";
-        ss << qtdTab() << "if (!" << c_nome_comp << ") goto " << next_case_label << ";\n";
+        string case_id = to_string(defgoto);
         
-        // 6. Adiciona o código dos comandos deste case.
+        // Mesmo padrão do if: comparação em três endereços
+        string temp_val = newTemp("int");
+        string temp_comp = newTemp("bool");
+        
+        ss <<"\n"<< qtdTab() << temp_val << " = " << $2.traducao << ";\n";
+        ss << qtdTab() << temp_comp << " = " << current_switch_var << " == " << temp_val << ";\n\n";
+        ss << qtdTab() << "if (!" << temp_comp << ") goto NextCase" << case_id << "_" << $2.traducao << ";\n";
         ss << $4.traducao;
-        
-        // 7. Define o rótulo para onde o próximo 'if' de case deve pular.
-        ss << qtdTab() << next_case_label << ":;\n"; // O ';' garante sintaxe C válida
+        ss << qtdTab() << "NextCase" << case_id << "_" << $2.traducao << ":\n";
         
         $$.traducao = ss.str();
     }
@@ -1133,73 +1065,13 @@ EXPR:
 ;
 EXPR_ARIT:
 	 EXPR_ARIT '+' EXPR_TERM %prec '+' {
-        // Primeiro, buscamos os tipos dos operandos
-        int idx_op1 = buscarVariavel($1.label);
-        int idx_op2 = buscarVariavel($3.label);
-        if (idx_op1 == -1 || idx_op2 == -1) { yyerror("Variavel de operacao nao encontrada."); }
-
-        string tipo1 = pilha[idx_op1][$1.label].tipo;
-        string tipo2 = pilha[idx_op2][$3.label].tipo;
-
-        // SE AMBOS FOREM STRING, TRATAMOS AQUI
-        if (tipo1 == "string" && tipo2 == "string") {
-            string op1_c_name = pilha[idx_op1][$1.label].endereco_memoria;
-            string op2_c_name = pilha[idx_op2][$3.label].endereco_memoria;
-            stringstream ss_op_code;
-
-            // Ativa a flag para gerar a função get_string_length (Len)
-            precisa_get_length = true;
-
-            // Cria temporárias para os tamanhos dos operandos
-            string chave_len1 = "t_len_" + to_string(tempVar);
-            adicionaVar(chave_len1, "int", true, false, 0, false, 0, 0, false, false);
-            string c_nome_len1 = pilha[pilha.size()-1][chave_len1].endereco_memoria;
-
-            string chave_len2 = "t_len_" + to_string(tempVar);
-            adicionaVar(chave_len2, "int", true, false, 0, false, 0, 0, false, false);
-            string c_nome_len2 = pilha[pilha.size()-1][chave_len2].endereco_memoria;
-
-            // Cria a chave para a temporária que guardará a nova string
-            string chave_res_str = "t_str_res_" + to_string(tempVar);
-            
-            // Adiciona a temporária à tabela de símbolos, marcando-a como 'malocada'
-            // adicionaVar(chave, tipo, temp, contador, malocada)
-            adicionaVar(chave_res_str, "string", true, false, true); 
-
-            // Recupera o nome C da temporária do resultado
-            string c_nome_res_str = pilha[pilha.size()-1][chave_res_str].endereco_memoria;
-            // ------------------------------------------------------------------
-
-
-            // Gera o código C para a concatenação
-            ss_op_code << qtdTab() << c_nome_len1 << " = Len(" << op1_c_name << ");\n";
-            ss_op_code << qtdTab() << c_nome_len2 << " = Len(" << op2_c_name << ");\n";
-            
-            // (Para ser mais 3-endereços, a soma dos tamanhos também usaria temporárias)
-            string chave_len_total = "t_len_total_" + to_string(tempVar);
-            adicionaVar(chave_len_total, "int", true, false, 0, false, 0, 0, false, false);
-            string c_nome_len_total = pilha[pilha.size()-1][chave_len_total].endereco_memoria;
-            ss_op_code << qtdTab() << c_nome_len_total << " = " << c_nome_len1 << " + " << c_nome_len2 << " + 1;\n";
-
-            ss_op_code << qtdTab() << c_nome_res_str << " = (char*)malloc(" << c_nome_len_total << ");\n";
-            ss_op_code << qtdTab() << "if (" << c_nome_res_str << " == NULL) { fprintf(stderr, \"Falha na alocacao de memoria.\\n\"); exit(1); }\n";
-            ss_op_code << qtdTab() << "strcpy(" << c_nome_res_str << ", " << op1_c_name << ");\n";
-            ss_op_code << qtdTab() << "strcat(" << c_nome_res_str << ", " << op2_c_name << ");\n";
-
-            $$.label = chave_res_str; 
-            $$.traducao = $1.traducao + $3.traducao + ss_op_code.str();
-
-        } else if (tipo1 == "string" || tipo2 == "string") {
-            // Caso de string com outro tipo
-            yyerror("Operador '+' com tipos incompativeis para string (" + tipo1 + ", " + tipo2 + ")");
-        } else { 
-            // Caso numérico: delega para a função veririficarTipo, como antes
-            stringstream resultado_verificacao;
-            resultado_verificacao = veririficarTipo($1.label, "+", $3.label);
-            $$.label = "t" + to_string(tempVar-1);
-            $$.traducao = $1.traducao + $3.traducao + resultado_verificacao.str();
+		stringstream ss;
+		string var1 = $1.label;
+		string var2 = $3.label;
+		ss = veririficarTipo(var1, "+", var2);
+		$$.label = "t" + to_string(tempVar-1);
+		$$.traducao = $1.traducao + $3.traducao + ss.str();
         }
-    }
     | EXPR_ARIT '-' EXPR_TERM %prec '-' {
         stringstream ss;
 		string var1 = $1.label;
@@ -1325,29 +1197,28 @@ EXPR_ATOM:
         $$.traducao = $2.traducao;
     }
     | '-' EXPR_ATOM %prec UMINUS {
-        int indice_escopo_operando = buscarVariavel($2.label);
-        if (indice_escopo_operando == -1) { yyerror("Variavel '" + $2.label + "' nao declarada (operando de UMINUS)"); }
-        string tipo_operando = pilha[indice_escopo_operando][$2.label].tipo;
-        string c_nome_operando = pilha[indice_escopo_operando][$2.label].endereco_memoria;
-        if (tipo_operando == "string" || tipo_operando == "bool") { yyerror("Operador unario '-' nao pode ser aplicado ao tipo '" + tipo_operando + "'"); }
-        string tipo_resultado = tipo_operando;
-        string chave_temp_resultado = "t_uminus_" + to_string(tempVar);
-        adicionaVar(chave_temp_resultado, tipo_resultado, true, false, 0, false, 0, 0, false, false);
-        string c_nome_resultado = pilha[pilha.size()-1][chave_temp_resultado].endereco_memoria;
-        stringstream ss_code;
-        ss_code << qtdTab() << c_nome_resultado << " = -" << c_nome_operando << ";\n";
-        $$.label = chave_temp_resultado;
-        $$.traducao = $2.traducao + ss_code.str();
+        string tipo = pilha[pilha.size()-1][$2.label].tipo;
+        if (tipo != "int" && tipo != "float") {
+            cout << "Erro: Operador unário '-' só pode ser aplicado a tipos 'int' ou 'float'.\n";
+            exit(1);
+        }
+        string temp_tipo = (tipo == "int") ? "int" : "float";
+        string temp = newTemp(temp_tipo);
+        stringstream ss;
+        ss << qtdTab() << temp << " = -(" << $2.traducao << ");\n";
+        $$.label = temp;
+        $$.traducao = $2.traducao + ss.str();
     }
     | TK_NUM {
-        string chave_temp_num = "t_num_" + to_string(tempVar);
         string tipo_num = ($1.traducao.find('.') != string::npos) ? "float" : "int";
-        adicionaVar(chave_temp_num, tipo_num, true, false, 0, false, 0, 0, false, false);
-        string c_nome_num = pilha[pilha.size()-1][chave_temp_num].endereco_memoria;
-        stringstream ss_code;
-        ss_code << qtdTab() << c_nome_num << " = " << $1.traducao << ";\n";
-        $$.label = chave_temp_num; // << ESTA É A LINHA CRUCIAL
-        $$.traducao = ss_code.str();
+        string temp = newTemp(tipo_num);
+        string num = $1.traducao;
+        if(tipo_num == "int")  pilha[pilha.size()-1][temp].numero = stoi(num);
+        pilha[pilha.size()-1][temp].inicializado = true;
+        stringstream ss;
+        ss << qtdTab() << temp << " = " << $1.traducao << ";\n";
+        $$.label = temp;
+        $$.traducao = ss.str();
     }
     | TK_ID {
         if (buscarVariavel($1.label) == -1) { yyerror("Variavel '" + $1.label + "' nao declarada"); }
@@ -1359,8 +1230,7 @@ EXPR_ATOM:
         $$.traducao = $1.traducao;
     }
     | TK_BOOL_TRUE {
-        string chave_temp_true = "t_bool_" + to_string(tempVar);
-        adicionaVar(chave_temp_true, "bool", true, false, 0, false, 0, 0, false, false);
+        string chave_temp_true = newTemp("bool");
         string c_nome_true = pilha[pilha.size()-1][chave_temp_true].endereco_memoria;
         stringstream ss_code;
         ss_code << qtdTab() << c_nome_true << " = 1;\n";
@@ -1368,8 +1238,7 @@ EXPR_ATOM:
         $$.traducao = ss_code.str();
     }
     | TK_BOOL_FALSE {
-        string chave_temp_false = "t_bool_" + to_string(tempVar);
-        adicionaVar(chave_temp_false, "bool", true, false, 0, false, 0, 0, false, false);
+        string chave_temp_false = newTemp("bool");
         string c_nome_false = pilha[pilha.size()-1][chave_temp_false].endereco_memoria;
         stringstream ss_code;
         ss_code << qtdTab() << c_nome_false << " = 0;\n";
@@ -1377,8 +1246,7 @@ EXPR_ATOM:
         $$.traducao = ss_code.str();
     }
     | TK_STRING_LITERAL {
-        string chave_temp_sl = "t_sl_" + to_string(tempVar);
-        adicionaVar(chave_temp_sl, "string", true, false, 0, false, 0, 0, false, true);
+        string chave_temp_sl = newTemp("string", false, true);
         string c_nome_sl = pilha[pilha.size()-1][chave_temp_sl].endereco_memoria;
         stringstream ss_code;
         ss_code << qtdTab() << c_nome_sl << " = (char*)malloc(" << $1.label.length() + 1 << ");\n";
@@ -1386,159 +1254,124 @@ EXPR_ATOM:
         $$.label = chave_temp_sl;
         $$.traducao = ss_code.str();
     }
-    // >>> NOVA REGRA PARA ACESSO A VETOR <<<
     | TK_ID '[' EXPR ']' {
-        // 1. Validar que o vetor existe
-        int idx_vetor = buscarVariavel($1.label);
-        if (idx_vetor == -1) { yyerror("Vetor '" + $1.label + "' nao declarado."); }
-        if (!pilha[idx_vetor][$1.label].eh_vetor) { yyerror("Variavel '" + $1.label + "' nao e um vetor."); }
+        string nome = $1.label;
+        string tipo = pilha[buscarVariavel(nome)][nome].tipo;
+        string indice = $3.label;
 
-        // 2. Pegar informações do vetor
-        string c_nome_vetor = pilha[idx_vetor][$1.label].endereco_memoria;
-        string tipo_elemento = pilha[idx_vetor][$1.label].tipo;
-
-        // 3. Criar temporária para o resultado
-        string chave_temp_valor = "t_vec_access_" + to_string(tempVar);
-        adicionaVar(chave_temp_valor, tipo_elemento, true, false, 0, false, 0, 0, false, false);
-        string c_nome_valor = pilha[pilha.size()-1][chave_temp_valor].endereco_memoria;
-
-        // 4. Gerar código C
-        stringstream ss_code;
-        
-        // Incluir o código da sub-expressão
-        ss_code << $3.traducao; // Código do índice
-        
-        // Buscar o índice após o código ter sido gerado
-        int idx_indice = buscarVariavel($3.label);
-        
-        if (idx_indice != -1) {
-            string c_nome_indice = pilha[idx_indice][$3.label].endereco_memoria;
-            
-            // Gerar o código de leitura
-            ss_code << qtdTab() << c_nome_valor << " = " << c_nome_vetor << "[" << c_nome_indice << "];\n";
-        } else {
-            ss_code << qtdTab() << c_nome_valor << " = 0; /* Erro: nao foi possivel acessar indice */\n";
+        if (buscarVariavel(nome) == -1) {
+            cout << "Erro: Variável '" << nome << "' não declarada.\n";
+            exit(1);
         }
-
-        // 5. Definir os atributos para esta expressão
-        $$.traducao = ss_code.str();
-        $$.label = chave_temp_valor;
+        if (buscarVariavel(indice) == -1) {
+            cout << "Erro: Variável '" << indice << "' não declarada.\n";
+            exit(1);
+        }
+        if (pilha[buscarVariavel(indice)][indice].tipo != "int") {
+            cout << "Erro: Índice de vetor deve ser do tipo 'int', mas é '" << pilha[buscarVariavel(indice)][indice].tipo << "'.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel(nome)][nome].num_dimensoes != 1) {
+            cout << "Erro: Acesso a vetor '" << nome << "' deve ser unidimensional.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel(indice)][indice].numero < 0 || pilha[buscarVariavel(indice)][indice].numero >= pilha[buscarVariavel(nome)][nome].dimensoes[0]) {
+            cout << "Erro: Índice '" << indice << "' fora dos limites do vetor '" << nome << "'.\n";
+            exit(1);
+        }
+        string temp = newTemp(tipo);
+        stringstream ss;
+        ss << $3.traducao;
+        ss << qtdTab() << temp << " = " << pilha[buscarVariavel(nome)][nome].endereco_memoria << "[" << $3.label << "];\n";
+        $$.traducao = ss.str();
+        $$.label = temp;
     }
     | TK_ID '[' EXPR ']' '[' EXPR ']' {
-        // --- ACESSO A MATRIZ ---
-        // 1. Validar que a matriz existe
-        int idx_matriz = buscarVariavel($1.label);
-        if (idx_matriz == -1) { yyerror("Matriz '" + $1.label + "' nao declarada."); }
-        if (!pilha[idx_matriz][$1.label].eh_matriz) { yyerror("Variavel '" + $1.label + "' nao e uma matriz."); }
+        string nome = $1.label;
+        string linha = $3.label;
+        string coluna = $6.label;
 
-        // 2. Pegar informações da matriz
-        string c_nome_matriz = pilha[idx_matriz][$1.label].endereco_memoria;
-        string tipo_elemento = pilha[idx_matriz][$1.label].tipo;
-        int num_colunas = pilha[idx_matriz][$1.label].num_colunas;
-
-        // 3. Criar temporárias para cálculo do offset e resultado
-        string chave_temp_offset = "t_offset_" + to_string(tempVar);
-        adicionaVar(chave_temp_offset, "int", true, false, 0, false, 0, 0, false, false);
-        string c_nome_offset = pilha[pilha.size()-1][chave_temp_offset].endereco_memoria;
-        
-        string chave_temp_valor = "t_mat_access_" + to_string(tempVar);
-        adicionaVar(chave_temp_valor, tipo_elemento, true, false, 0, false, 0, 0, false, false);
-        string c_nome_valor = pilha[pilha.size()-1][chave_temp_valor].endereco_memoria;
-
-        // 4. Gerar código C
-        stringstream ss_code;
-        
-        // Incluir o código das sub-expressões
-        ss_code << $3.traducao; // Código do primeiro índice (linha)
-        ss_code << $6.traducao; // Código do segundo índice (coluna)
-        
-        // Buscar os índices após o código ter sido gerado
-        int idx_linha = buscarVariavel($3.label);
-        int idx_coluna = buscarVariavel($6.label);
-        
-        // SOLUÇÃO ROBUSTA: Se não encontrar como variável, usar como literal
-        string c_nome_linha, c_nome_coluna;
-        
-        if (idx_linha != -1) {
-            c_nome_linha = pilha[idx_linha][$3.label].endereco_memoria;
-        } else {
-            // Se não for variável, assumir que é literal - criar temporária
-            string chave_temp_linha = "t_linha_" + to_string(tempVar);
-            adicionaVar(chave_temp_linha, "int", true, false, 0, false, 0, 0, false, false);
-            c_nome_linha = pilha[pilha.size()-1][chave_temp_linha].endereco_memoria;
-            ss_code << qtdTab() << c_nome_linha << " = " << $3.label << ";\n";
+        if (buscarVariavel(nome) == -1) {
+            cout << "Erro: Variável '" << nome << "' não declarada.\n";
+            exit(1);
         }
-        
-        if (idx_coluna != -1) {
-            c_nome_coluna = pilha[idx_coluna][$6.label].endereco_memoria;
-        } else {
-            string chave_temp_coluna = "t_coluna_" + to_string(tempVar);
-            adicionaVar(chave_temp_coluna, "int", true, false, 0, false, 0, 0, false, false);
-            c_nome_coluna = pilha[pilha.size()-1][chave_temp_coluna].endereco_memoria;
-            ss_code << qtdTab() << c_nome_coluna << " = " << $6.label << ";\n";
+        if (buscarVariavel(linha) == -1) {
+            cout << "Erro: Variável '" << linha << "' não declarada.\n";
+            exit(1);
         }
-            
-        // Gerar o código de leitura com cálculo de offset: offset = linha * num_colunas + coluna
-        ss_code << qtdTab() << c_nome_offset << " = " << c_nome_linha << " * " << num_colunas << " + " << c_nome_coluna << ";\n";
-        ss_code << qtdTab() << c_nome_valor << " = " << c_nome_matriz << "[" << c_nome_offset << "];\n";
+        if (buscarVariavel(coluna) == -1) {
+            cout << "Erro: Variável '" << coluna << "' não declarada.\n";
+            exit(1);
+        }
+        if (pilha[buscarVariavel(linha)][linha].tipo != "int") {
+            cout << "Erro: Índice de linha deve ser do tipo 'int', mas é '" << pilha[buscarVariavel(linha)][linha].tipo << "'.\n";
+            exit(1);
+        }
+        if (pilha[buscarVariavel(coluna)][coluna].tipo != "int") {
+            cout << "Erro: Índice de coluna deve ser do tipo 'int', mas é '" << pilha[buscarVariavel(coluna)][coluna].tipo << "'.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel(nome)][nome].num_dimensoes != 2) {
+            cout << "Erro: Acesso a matriz '" << nome << "' deve ser bidimensional.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel(linha)][linha].numero < 0 || pilha[buscarVariavel(linha)][linha].numero >= pilha[buscarVariavel(nome)][nome].dimensoes[0]) {
+            cout << "Erro: Índice de linha '" << linha << "' fora dos limites da matriz '" << nome << "'.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel(coluna)][coluna].numero < 0 || pilha[buscarVariavel(coluna)][coluna].numero >= pilha[buscarVariavel(nome)][nome].dimensoes[1]) {
+            cout << "Erro: Índice de coluna '" << coluna << "' fora dos limites da matriz '" << nome << "'.\n";
+            exit(1);
+        }
+        string tipo = pilha[buscarVariavel(nome)][nome].tipo;
+        string temp1 = newTemp("int");
+        string temp2 = newTemp("int");
+        string temp3 = newTemp(tipo);
+        stringstream ss;
+        ss << $3.traducao; // Código para calcular o índice da linha
+        ss << $6.traducao; // Código para calcular o índice da coluna
+        
+        ss << qtdTab() << temp1 << " = " << pilha[buscarVariavel(linha)][linha].endereco_memoria << " * " << pilha[buscarVariavel(nome)][nome].dimensoes[1] << ";\n";
+        ss << qtdTab() << temp2 << " = " << temp1 << " + " << pilha[buscarVariavel(coluna)][coluna].endereco_memoria << ";\n"; 
+        ss << qtdTab() << temp2 << " = " << pilha[buscarVariavel(nome)][nome].endereco_memoria << "[" << temp2 << "];\n";
 
-        // 5. Definir os atributos para esta expressão
-        $$.traducao = ss_code.str();
-        $$.label = chave_temp_valor;
+        $$.traducao = ss.str();
+        $$.label = temp2;
     }
 ;
 COVERT_TYPE:
     TK_TIPO_INT '(' EXPR ')' {
-        // 1. Buscar informações da expressão a ser convertida ($3)
         int indice_expr = buscarVariavel($3.label);
         if (indice_expr == -1) { yyerror("Variavel '" + $3.label + "' nao declarada (em cast para int)."); }
-
         string tipo_original = pilha[indice_expr][$3.label].tipo;
         string c_nome_original = pilha[indice_expr][$3.label].endereco_memoria;
-
-        // Opcional, mas recomendado: Verificar se o cast é válido
-        if (tipo_original == "string") {
-            yyerror("Nao e possivel converter tipo 'string' para 'int'.");
+        if (tipo_original != "int" && tipo_original != "float") {
+            cout << "Erro: Conversao de tipo '" << tipo_original << "' para 'int' nao e possivel.\n";
+            exit(1);
         }
-
-        // 2. Criar uma chave para a nova temporária que armazenará o resultado
-        string chave_temp_cast = "t_cast_int_" + to_string(tempVar);
-
-        // 3. Adicionar a nova temporária à tabela de símbolos com o tipo 'int'
-        adicionaVar(chave_temp_cast, "int", true, false, 0, false, 0, 0, false, false);
-
-        // 4. Obter o nome C da nova temporária
+        string chave_temp_cast = newTemp("int");
         string c_nome_cast = pilha[pilha.size()-1][chave_temp_cast].endereco_memoria;
-
-        // 5. Gerar o código C para a conversão (cast)
         stringstream ss_code;
         ss_code << $3.traducao; // Primeiro, o código da expressão original, se houver
         ss_code << qtdTab() << c_nome_cast << " = (int)" << c_nome_original << ";\n";
-        
-        // 6. Definir os atributos para este nó
         $$.label = chave_temp_cast; // O label é a CHAVE da nova temporária
         $$.traducao = ss_code.str();
     }
     | TK_TIPO_FLOAT '(' EXPR ')' {
-        // Lógica idêntica para o cast para float
         int indice_expr = buscarVariavel($3.label);
         if (indice_expr == -1) { yyerror("Variavel '" + $3.label + "' nao declarada (em cast para float)."); }
-
         string tipo_original = pilha[indice_expr][$3.label].tipo;
         string c_nome_original = pilha[indice_expr][$3.label].endereco_memoria;
 
-        if (tipo_original == "string") {
-            yyerror("Nao e possivel converter tipo 'string' para 'float'.");
+        if (tipo_original != "int" && tipo_original != "float") {
+            cout << "Erro: Conversao de tipo '" << tipo_original << "' para 'float' nao e possivel.\n";
+            exit(1);
         }
-
-        string chave_temp_cast = "t_cast_float_" + to_string(tempVar);
-        adicionaVar(chave_temp_cast, "float", true);
+        string chave_temp_cast = newTemp("float");
         string c_nome_cast = pilha[pilha.size()-1][chave_temp_cast].endereco_memoria;
-
         stringstream ss_code;
         ss_code << $3.traducao;
-        ss_code << qtdTab() << c_nome_cast << " = (float)" << c_nome_original << ";\n";
-        
+        ss_code << qtdTab() << c_nome_cast << " = (float)" << c_nome_original << ";\n"; 
         $$.label = chave_temp_cast;
         $$.traducao = ss_code.str();
     }
@@ -1561,36 +1394,229 @@ void yyerror(string MSG) {
 	exit(1);
 }
 
-void adicionaVar(string nome, string tipo, bool temp, bool eh_vetor, int tamanho, bool eh_matriz, int linhas, int colunas, bool c, bool malocada) {
-    // Verifica se a variável já existe no escopo atual
-    if (pilha.back().count(nome)) {
-        yyerror("Variavel '" + nome + "' ja declarada neste escopo.");
+void adicionaVar(string nome, string tipo, int d, int N_d[2], bool temp, bool contador) {
+    if (buscarVariavel(nome) != -1) {
+        cout << "Erro: Variável '" << nome << "' já declarada no escopo atual." << endl;
+        exit(1);
     }
-    
     // Pega uma referência para o escopo atual para facilitar a leitura
-    tabela_simbolos& escopo_atual = pilha.back();
-    
-    // Preenche TODAS as informações na struct da tabela de símbolos
-    escopo_atual[nome].tipo = tipo;
-    escopo_atual[nome].temporaria = temp;
-    escopo_atual[nome].malocada = malocada;
-    escopo_atual[nome].contador = c;
-    
-    // Armazena as informações do vetor
-    escopo_atual[nome].eh_vetor = eh_vetor;
-    escopo_atual[nome].tamanho_vetor = tamanho;
-    
-    // Armazena as informações da matriz
-    escopo_atual[nome].eh_matriz = eh_matriz;
-    escopo_atual[nome].num_linhas = linhas;
-    escopo_atual[nome].num_colunas = colunas;
-
+    tabela_simbolos& Escopo = pilha.back();
+    // Preenche a tabela de símbolos
+    Escopo[nome].tipo = tipo;
+    Escopo[nome].num_dimensoes = d;
+    Escopo[nome].dimensoes[0] = N_d[0];
+    Escopo[nome].dimensoes[1] = N_d[1];
+    Escopo[nome].temporaria = temp;
+    Escopo[nome].contador = contador;
+    Escopo[nome].malocada = false;
     // Gera o nome da variável C
-    if (temp) {
-        escopo_atual[nome].endereco_memoria = "t" + to_string(tempVar++);
-    } else {
-        escopo_atual[nome].endereco_memoria = "d" + to_string(defVar++);
+    if (temp) Escopo[nome].endereco_memoria = "t" + to_string(tempVar++);
+    else Escopo[nome].endereco_memoria = "d" + to_string(defVar++);
+}
+
+string newTemp(string tipo, bool contador, bool malocada) {
+    string nomeTemp = "t" + to_string(tempVar);
+    int dimensoes[2] = {0, 0}; // Inicializa dimensões como 0
+    adicionaVar(nomeTemp, tipo, 0, dimensoes, true, contador);
+    pilha.back()[nomeTemp].malocada = malocada;
+    return nomeTemp;
+}
+
+void addPilhaLaco(string b, string c){
+	RotulosDeLaço temp;
+	temp.rotuloBreak = b;
+	temp.rotuloContinue = c;
+
+	pilhaDeRotulosDeLaços.push_back(temp);
+}
+
+void criarPilha(){
+	defbloco++;
+	pilha.push_back(tabela_simbolos());
+}
+
+stringstream fecharPilha(stringstream& frees) {
+	stringstream ss, count, all;
+	// Controla a tabulação
+
+	if(defbloco > 0){
+		for(const auto& [nome, info] : pilha.back()) {
+			if(info.temporaria)
+				ss << qtdTab() << tipoTraducao[info.tipo] <<" "<< info.endereco_memoria << ";\n";
+			else{
+                if(info.num_dimensoes == 0)
+				    ss << qtdTab() << tipoTraducao[info.tipo] <<" "<< info.endereco_memoria << ";\t //"<< nome << "\n";
+                else
+                    ss << qtdTab() << tipoTraducao[info.tipo] <<"* "<< info.endereco_memoria << ";\t //"<< nome << "\n";
+            }
+			if(info.malocada){
+				frees << qtdTab(-1) << "free(" << info.endereco_memoria << ");\n";
+			}
+			if(info.contador){
+				count << qtdTab() << info.endereco_memoria << " = 0;\n";
+			}
+		}
+		defbloco--;
+		pilha.pop_back();
+	}
+	else{
+		cout << "Erro: Pilha de escopo vazia.\n";
+		exit(1);
+	}
+	all << ss.str() << count.str();
+	return all;
+}
+stringstream fecharPilha() {
+	stringstream ss;
+	return fecharPilha(ss);
+}
+
+int buscarVariavel(string nome){
+	if (pilha.empty()) {
+		cout << "Erro: Pilha de escopo vazia.\n";
+		exit(1);
+	}
+
+	int i = pilha.size() -1;
+
+	while(i >= 0){
+		if(pilha[i].find(nome) != pilha[i].end()){
+			return i;
+		}
+		i--;
+	}
+    return -1; // Nunca deve chegar aqui, mas é para evitar warning
+}
+
+string qtdTab(int dif){
+	string tab = "";
+	for(int i = 1; i < (defbloco + dif); i++){
+		tab += "\t";
+	}
+	return tab;
+}
+
+string generateSwitchCases(string caseData, string switchVar, string switchId) {
+    stringstream ss;
+    
+    // Parse dos dados dos cases
+    vector<string> cases;
+    vector<string> comandos;
+    bool hasDefault = false;
+    string defaultComandos = "";
+    
+    // Separar cases e comandos (implementação simplificada)
+    // Você precisará adaptar baseado na estrutura real dos seus dados
+    
+    string var_switch = pilha[buscarVariavel(switchVar)][switchVar].endereco_memoria;
+    
+    // Gerar comparações para cada case (mesmo padrão do if)
+    for (int i = 0; i < cases.size(); i++) {
+        string temp_comp = newTemp("bool");
+        
+        ss << qtdTab(1) << temp_comp << " = " << var_switch << " == " << cases[i] << ";\n";
+        ss << qtdTab(1) << "if (!" << temp_comp << ") goto Case" << switchId << "_" << (i+1) << ";\n";
+        ss << comandos[i];
+        ss << qtdTab(1) << "goto EndSwitch" << switchId << ";\n";
+        ss << qtdTab(1) << "Case" << switchId << "_" << (i+1) << ":\n";
     }
+    
+    // Default case se existir
+    if (hasDefault) {
+        ss << defaultComandos;
+    }
+    
+    return ss.str();
+}
+
+stringstream addFuncao(int num){
+    stringstream ss;
+    switch (num) {
+        case 1: // Função para obter o tamanho de uma string
+            ss << qtdTab() << "void Len(const char* str) {\n";
+            ss << qtdTab(1)<< "int len;\n";
+            ss << qtdTab(1)<< "int f0;\n";
+            ss << qtdTab(1)<< "int f1;\n";
+            ss << qtdTab(1)<< "int f2;\n\n";
+            ss << qtdTab(1)<< "len = 0;\n";
+            ss << qtdTab(1)<< "f0 = (str == NULL);\n";
+            ss << qtdTab(1)<< "if (f0) goto loop_end_len;\n";
+            ss << qtdTab(1)<< "loop_start_len:\n";
+            ss << qtdTab(2)<< "f1 = str[len];\n";
+            ss << qtdTab(2)<< "f2 = (f1 == '\\0');\n"; // Usei f1 aqui para estilo 3-endereços
+            ss << qtdTab(2)<< "if (f2) goto loop_end_len;\n";
+            ss << qtdTab(2)<< "len = len + 1;\n";
+            ss << qtdTab(1)<< "goto loop_start_len;\n";
+            ss << qtdTab(1)<< "loop_end_len:;\n"; // Adicionado ; para sintaxe C sempre válida
+            ss << qtdTab(1)<< "return len;\n";
+            ss << qtdTab() << "}\n\n";
+            break;
+        case 2: // Função para ler uma string
+            ss << qtdTab() << "char* input_string() {\n";
+            ss << qtdTab(1) << "int scanf_result;\n";
+            ss << qtdTab(1) << "int flag_is_terminator;\n";
+            ss << qtdTab(1) << "int flag_is_newline;\n";
+            ss << qtdTab(1) << "int flag_is_space;\n";
+            ss << qtdTab(1) << "int flag_is_full;\n";
+            ss << qtdTab(1) << "char c;\n";
+            ss << qtdTab(1) << "char* buffer;\n";
+            ss << qtdTab(1) << "int len;\n";
+            ss << qtdTab(1) << "int capacity;\n";
+            ss << qtdTab(1) << "capacity = 16;\n";
+            ss << qtdTab(1) << "len = 0;\n";
+            ss << qtdTab(1) << "buffer = (char*)malloc(capacity);\n";
+            ss << qtdTab() << "\n";
+            ss << qtdTab() << "input_str_loop_start:\n";
+            ss << qtdTab(1) << "scanf_result = scanf(\"%c\", &c);\n";
+            ss << qtdTab(1) << "flag_is_terminator = scanf_result != 1;\n";
+            ss << qtdTab(1) << "if (flag_is_terminator) goto input_str_loop_end;\n";
+            ss << qtdTab(1) << "flag_is_newline = c == '\\n';\n";
+            ss << qtdTab(1) << "flag_is_space = c == ' ';\n";
+            ss << qtdTab(1) << "flag_is_terminator = flag_is_newline || flag_is_space;\n";
+            ss << qtdTab(1) << "if (flag_is_terminator) goto input_str_loop_end;\n";
+            ss << qtdTab(1) << "\n";
+            ss << qtdTab(1) << "buffer[len] = c;\n";
+            ss << qtdTab(1) << "len = len + 1;\n";
+            ss << qtdTab(1) << "\n";
+            ss << qtdTab(1) << "flag_is_full = len >= capacity;\n";
+            ss << qtdTab(1) << "if (!flag_is_full) goto input_str_loop_start;\n";
+            ss << qtdTab(1) << "\n";
+            ss << qtdTab(1) << "capacity = capacity * 2;\n";
+            ss << qtdTab(1) << "buffer = (char*)realloc(buffer, capacity);\n";
+            ss << qtdTab(1) << "goto input_str_loop_start;\n";
+            ss << qtdTab() << "\n";
+            ss << qtdTab() << "input_str_loop_end:;\n";
+            ss << qtdTab(1) << "buffer[len] = '\\0';\n";
+            ss << qtdTab(1) << "return buffer;\n";
+            ss << qtdTab() << "}\n\n";
+            break;
+        case 3: // Função para ler booleano
+            
+            ss << qtdTab() << "inr input_bool();\n";
+            ss << qtdTab(1) << "char c;\n";
+            ss << qtdTab(1) << "int aux;\n";
+            ss << qtdTab(1) << "// Ignora espacos em branco antes de ler\n";
+            ss << qtdTab(1) << "do { scanf(\"%c\", &c); } while (c == ' ' || c == '\\n');\n\n";
+            ss << qtdTab(1) << "// Checa a palavra 'true'\n";
+            ss << qtdTab(1) << "aux = c == 't';\n";
+            ss << qtdTab(1) << "if (!aux) goto input_bool_false;\n";
+            ss << qtdTab(1) << "scanf(\"%c\", &c);\n";
+            ss << qtdTab(1) << "aux = c == 'r';\n";
+            ss << qtdTab(1) << "if (!aux) goto input_bool_false;\n";
+            ss << qtdTab(1) << "scanf(\"%c\", &c);\n";
+            ss << qtdTab(1) << "aux = c == 'u';\n";
+            ss << qtdTab(1) << "if (!aux) goto input_bool_false;\n";
+            ss << qtdTab(1) << "scanf(\"%c\", &c);\n";
+            ss << qtdTab(1) << "aux = c == 'e';\n";
+            ss << qtdTab(1) << "if (!aux) goto input_bool_false\n";
+            ss << qtdTab(1) << "return 1; // 'true' foi lido\n\n";
+            ss << qtdTab(1) << "input_bool_false:\n";
+            ss << qtdTab(1) << "// Qualquer outra coisa é considerada 'false'\n";
+            ss << qtdTab(1) << "return 0;\n";
+            ss << qtdTab() << "}\n\n";
+            break;
+            }
+    return ss;
 }
 
 stringstream veririficarTipo(string var1, string operador, string var2) {
@@ -1637,10 +1663,8 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 	}	
 	else if(operador == "+" || operador == "-" || operador == "*" || operador == "/" || operador == "%"){		
 		if(tipo1 != tipo2){
-			string temp = "t" + to_string(tempVar);
-			adicionaVar(temp, "float", true);
-			string temp2 = "t" + to_string(tempVar);
-			adicionaVar(temp2, "float", true);
+			string temp = newTemp("float");
+			string temp2 = newTemp("float");
 
 			if(tipo1 == "int" && tipo2 == "float"){
 				ss << qtdTab() << temp << " = (float)" << endereco1 << ";\n";
@@ -1656,8 +1680,7 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 			}
 		}
 		else if(tipo1 == "int" || tipo1 == "float"){
-			string temp = "t" + to_string(tempVar);
-			adicionaVar(temp, tipo1, true);
+			string temp = newTemp(tipo1);
 			ss << qtdTab() << temp << " = " << endereco1 << " " << operador << " " << endereco2 << ";\n";
 		}
 		else{
@@ -1670,25 +1693,20 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 			cout << "Erro: Operador lógico " << operador << " só pode ser usado com tipos booleanos.\n";
 			exit(1);
 		}
-		string temp = "t" + to_string(tempVar);
-		adicionaVar(temp, "bool", true);
+		string temp = newTemp("bool");
 		ss << qtdTab() << temp << " = " << endereco1 << " " << operador << " " << endereco2 << ";\n";
 	}
 	else if(operador == "==" || operador == "!="){
 		if(tipo1 != tipo2){
 			if(tipo1 == "int" && tipo2 == "float"){
-				string temp = "t" + to_string(tempVar);
-				adicionaVar(temp, "float", true);
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
+				string temp = newTemp("float");
+				string temp2 = newTemp("bool");
 				ss << qtdTab() << temp << " = (float)" << endereco1 << ";\n";
 				ss << qtdTab() << temp2 << " = " << temp << " " << operador << " " << endereco2 << ";\n";
 			}
 			else if(tipo1 == "float" && tipo2 == "int"){
-				string temp = "t" + to_string(tempVar);
-				adicionaVar(temp, "float", true);
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
+				string temp = newTemp("float");
+				string temp2 = newTemp("bool");
 				ss << qtdTab() << temp << " = (float)" << endereco2 << ";\n";
 				ss << qtdTab() << temp2 << " = " << temp << " " << operador << " " << endereco1 << ";\n";
 			}
@@ -1698,8 +1716,7 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 			}
 		}
 		else if (tipo1 == "int" || tipo1 == "float" || tipo1 == "bool"){
-			string temp = "t" + to_string(tempVar);
-			adicionaVar(temp, "bool", true);
+			string temp = newTemp("bool");
 			ss << qtdTab() << temp << " = ("<< endereco1 <<" "<< operador <<" "<< endereco2<<");\n";
 		}
 		else{
@@ -1712,8 +1729,7 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 			cout << "Erro: Operador lógico '!' só pode ser usado com tipos booleanos.\n";
 			exit(1);
 		}
-		string temp = "t" + to_string(tempVar);
-		adicionaVar(temp, "bool", true);
+		string temp = newTemp("bool");
 		ss << qtdTab() << temp << " = !" << endereco1 << ";\n";
 	}
 
@@ -1721,26 +1737,16 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 	// <> concatenação
 	else if(operador == "<>") {
 		// 1. Validar tipos e ativar a flag para a função Len (get_string_length)
-		precisa_get_length = true; // Garante que a função Len() seja gerada
+		len = true; // Garante que a função Len() seja gerada
 		if(tipo1 != "string" || tipo2 != "string"){
 			yyerror("Operador de concatenacao '+' so pode ser usado com strings.");
 		}
 
 		// 2. Criar TODAS as temporárias necessárias para a operação
-		string temp_len1 = "t_len_" + to_string(tempVar);
-		adicionaVar(temp_len1, "int", true);
-
-		string temp_len2 = "t_len_" + to_string(tempVar);
-		adicionaVar(temp_len2, "int", true);
-		
-		string temp_total_len = "t_total_" + to_string(tempVar);
-		adicionaVar(temp_total_len, "int", true);
-
-		string temp_result_str = "t_res_" + to_string(tempVar);
-		// <<< CORREÇÃO IMPORTANTE AQUI >>>
-		// Adiciona a temporária do resultado, marcando-a como 'malocada'
-		// Assinatura: (nome, tipo, temp, contador, malocada)
-		adicionaVar(temp_result_str, "string", true, false, true);
+		string temp_len1 = newTemp("int");
+		string temp_len2 = newTemp("int");
+		string temp_total_len = newTemp("int");
+		string temp_result_str = newTemp("string", false, true); // String temporária para o resultado
 
 		// 3. Gerar o código C para a concatenação em estilo 3-endereços
 		ss << qtdTab() << pilha[buscarVariavel(temp_len1)][temp_len1].endereco_memoria << " = Len(" << endereco1 << ");\n";
@@ -1749,25 +1755,19 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 		ss << qtdTab() << pilha[buscarVariavel(temp_result_str)][temp_result_str].endereco_memoria << " = (char*)malloc(" << pilha[buscarVariavel(temp_total_len)][temp_total_len].endereco_memoria << ");\n";
 		ss << qtdTab() << "strcpy(" << pilha[buscarVariavel(temp_result_str)][temp_result_str].endereco_memoria << ", " << endereco1 << ");\n";
 		ss << qtdTab() << "strcat(" << pilha[buscarVariavel(temp_result_str)][temp_result_str].endereco_memoria << ", " << endereco2 << ");\n";
-		
-		// **NÃO** tentamos dar 'free' nos operandos aqui. Isso será feito no final do escopo.
  	}
 
 	else if(operador == ">" || operador == "<" || operador == ">=" || operador == "<="){
 		if(tipo1 != tipo2){
 			if(tipo1 == "int" && tipo2 == "float"){
-				string temp = "t" + to_string(tempVar);
-				adicionaVar(temp, "float", true);
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
+				string temp = newTemp("float");
+				string temp2 = newTemp("bool");
 				ss << qtdTab() << temp << " = (float)" << endereco1 << ";\n";
 				ss << qtdTab() << temp2 << " = " << temp << " " << operador << " " << endereco2 << ";\n";
 			}
 			else if(tipo1 == "float" && tipo2 == "int"){
-				string temp = "t" + to_string(tempVar);
-				adicionaVar(temp, "float", true);
-				string temp2 = "t" + to_string(tempVar);
-				adicionaVar(temp2, "bool", true);
+				string temp = newTemp("float");
+				string temp2 = newTemp("bool");
 				ss << qtdTab() << temp << " = (float)" << endereco2 << ";\n";
 				ss << qtdTab() << temp2 << " = " << temp << " " << operador << " " << endereco1 << ";\n";
 			}
@@ -1777,8 +1777,7 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 			}
 		}
 		else if(tipo1 != "bool" && tipo2 != "bool"){
-			string temp = "t" + to_string(tempVar);
-			adicionaVar(temp, "bool", true);
+			string temp = newTemp("bool");  
 			ss << qtdTab() << temp << " = " << endereco1 << " " << operador << " " << endereco2 << ";\n";
 		}
 		else{
@@ -1791,108 +1790,4 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 		exit(1);
 	}
 	return ss;
-}
-
-void addPilhaLaco(string b, string c){
-	RotulosDeLaço temp;
-	temp.rotuloBreak = b;
-	temp.rotuloContinue = c;
-
-	pilhaDeRotulosDeLaços.push_back(temp);
-}
-
-void criarPilha(){
-	defbloco++;
-	pilha.push_back(tabela_simbolos());
-}
-
-stringstream fecharPilha(stringstream& frees) {
-	stringstream ss, count, all;
-	// Controla a tabulação
-
-	if(defbloco > 0){
-		for(const auto& [nome, info] : pilha.back()) {
-			if(info.temporaria)
-				ss << qtdTab() << tipoTraducao[info.tipo] <<" "<< info.endereco_memoria << ";\n";
-			else
-				ss << qtdTab() << tipoTraducao[info.tipo] <<" "<< info.endereco_memoria << ";\t //"<< nome << "\n";
-			if(info.malocada){
-				frees << qtdTab(-1) << "free(" << info.endereco_memoria << ");\n";
-			}
-			if(info.contador){
-				count << qtdTab() << info.endereco_memoria << " = 0;\n";
-			}
-		}
-		defbloco--;
-		pilha.pop_back();
-	}
-	else{
-		cout << "Erro: Pilha de escopo vazia.\n";
-		exit(1);
-	}
-	all << ss.str() << count.str();
-	return all;
-}
-stringstream fecharPilha() {
-	stringstream ss;
-	return fecharPilha(ss);
-}
-
-int buscarVariavel(string nome){
-	if (pilha.empty()) {
-		cout << "Erro: Pilha de escopo vazia.\n";
-		exit(1);
-	}
-
-	int i = pilha.size() -1;
-
-	while(i >= 0){
-		if(pilha[i].find(nome) != pilha[i].end()){
-			return i;
-		}
-		i--;
-	}
-	return -1;
-}
-
-string qtdTab(int dif){
-	string tab = "";
-	for(int i = 1; i < (defbloco + dif); i++){
-		tab += "\t";
-	}
-	return tab;
-}
-
-string generateSwitchCases(string caseData, string switchVar, string switchId) {
-    stringstream ss;
-    
-    // Parse dos dados dos cases
-    vector<string> cases;
-    vector<string> comandos;
-    bool hasDefault = false;
-    string defaultComandos = "";
-    
-    // Separar cases e comandos (implementação simplificada)
-    // Você precisará adaptar baseado na estrutura real dos seus dados
-    
-    string var_switch = pilha[buscarVariavel(switchVar)][switchVar].endereco_memoria;
-    
-    // Gerar comparações para cada case (mesmo padrão do if)
-    for (int i = 0; i < cases.size(); i++) {
-        string temp_comp = "t" + to_string(tempVar);
-        adicionaVar(temp_comp, "bool", true);
-        
-        ss << qtdTab(1) << temp_comp << " = " << var_switch << " == " << cases[i] << ";\n";
-        ss << qtdTab(1) << "if (!" << temp_comp << ") goto Case" << switchId << "_" << (i+1) << ";\n";
-        ss << comandos[i];
-        ss << qtdTab(1) << "goto EndSwitch" << switchId << ";\n";
-        ss << qtdTab(1) << "Case" << switchId << "_" << (i+1) << ":\n";
-    }
-    
-    // Default case se existir
-    if (hasDefault) {
-        ss << defaultComandos;
-    }
-    
-    return ss.str();
 }

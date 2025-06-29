@@ -1,6 +1,5 @@
 %{
 #include <string>
-#include "sintatica.tab.h"
 int numLinha = 1;
 
 using namespace std;
