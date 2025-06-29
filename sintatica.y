@@ -8,18 +8,20 @@
 #include <stack>
 #include <cctype>
 #include <cstdlib>
+#include <climits>
+#include <algorithm>
 
 #define YYSTYPE atributos
 
 using namespace std;
 
-// Estrutura para armazenar a definição de um conjunto (struct)
-// Mapeia o nome de um membro para o seu tipo (ex: "x" -> "int")
 typedef map<string, string> MembrosConjunto;
-
-// Tabela global para armazenar todas as definições de conjuntos
-// Mapeia o nome de um conjunto para a estrutura de seus membros
 map<string, MembrosConjunto> definicoesConjunto;
+
+typedef vector<string> ParametrosFuncao;
+vector<ParametrosFuncao> definicoesFuncoes;
+vector<string> saidaFuncoes;
+vector<string> nomeFuncoes;
 
 // Declaração de funções
 
@@ -53,6 +55,7 @@ stringstream addFuncao(int num);
 // Contadores globais
 int tempVar = 0;
 int defVar = 0;
+int defFuncao = 0;
 int defbloco = 0;
 int defgoto = 0;
 int tempElse = 0;
@@ -86,6 +89,7 @@ struct tabela{
 	bool contador;  //?
 	bool malocada; //?
     bool eh_set;                // Indica se é um conjunto (struct)
+    bool eh_funcao;             // Indica se é uma função
 };
 
 struct RotulosDeLaço {
@@ -135,7 +139,7 @@ string novoRotulo() {
 %}
 
 %token TK_NUM TK_ID TK_TIPO_INT TK_TIPO_FLOAT TK_MAIN
-%token TK_TIPO_CHAR TK_TIPO_BOOL TK_IDX
+%token TK_TIPO_CHAR TK_TIPO_BOOL
 %token TK_IGUAL TK_DIFERENTE TK_MAIOR_IGUAL TK_MENOR_IGUAL
 %token TK_AND TK_OR
 %token TK_CHAR TK_BOOL_TRUE TK_BOOL_FALSE
@@ -145,7 +149,7 @@ string novoRotulo() {
 %token TK_ESCREVA TK_LEIA
 %token TK_SWITCH TK_CASE TK_DEFAULT
 %token TK_IMPRIMIR_VETOR TK_QUICKSORT
-%token TK_CONJUNTO TK_PONTO //Tokens para a struct
+%token TK_CONJUNTO TK_PONTO TK_FUNCAO TK_RETURN
 
 %start S
 
@@ -182,7 +186,7 @@ S:
 INICIO:
 	DECLARACAO MAIN
 	{
-		if($1.traducao.empty()) {
+		/*if($1.traducao.empty()) {
 			$$.traducao = $2.traducao;
 		} else {
 			stringstream ss;
@@ -191,7 +195,8 @@ INICIO:
 				<< $1.traducao
 				<< "}\n\n";
 			$$.traducao = ss.str() + $2.traducao;
-		}
+		}*/
+        $$.traducao = $1.traducao + $2.traducao;
 	}
 	| DECLARACAO
 	{
@@ -466,10 +471,15 @@ DECLARACAO:
 	  {
 		if(!$1.traducao.empty()) {
 			atribuicaoGlobal = true; // Marca que há atribuição global
+            cout << "Não é permitido atribuição global de variáveis fora do bloco principal.\n";
+            exit(1);
 		}
         $$.traducao = $1.traducao;
       }
       | DEFINIR_CONJUNTO DECLARACAO{ //Linhas 472 até 474 são referentes a definição de conjuntos
+        $$.traducao = $1.traducao + $2.traducao;
+      }
+      | DEFINIR_FUNCAO DECLARACAO {
         $$.traducao = $1.traducao + $2.traducao;
       }
 	  | 
@@ -522,6 +532,187 @@ LISTA_MEMBROS:
     }
 ;// NOVA REGRA PARA DEFINIR UM CONJUNTO (gera a struct em C)
 
+DEFINIR_FUNCAO:
+    INICIO_FUNCAO '(' LISTA_PARAMETROS ')' BLOCO_FUNCAO {
+        string nomeFuncao = $1.label;
+        string retornoTipo;
+
+        if($5.label.empty()) {
+            retornoTipo = "void"; // Se não houver retorno, é void
+        } else {
+            retornoTipo = $5.label; // Tipo de retorno da função
+        }
+
+        if($5.label.empty() && $3.label.empty()) {
+            cout << "A função '" << nomeFuncao << "' não possui parâmetros nem retorno.\n";
+            exit(1);
+        }
+
+        if($5.traducao.empty()) {
+            cout << "A função '" << nomeFuncao << "' não possui corpo.\n";
+            exit(1);
+        }
+
+        if(buscarVariavel(nomeFuncao) != -1) {
+            cout << "O nome '" << nomeFuncao << "' ja foi usado em outro lugar.\n";
+        }
+        // Adiciona no map
+
+        stringstream ss;
+        saidaFuncoes.push_back(retornoTipo); // Adiciona o nome da função na lista de saídas
+        ss << qtdTab() << retornoTipo << " " << nomeFuncao << "(";
+        ss << $3.label; // Lista de parâmetros
+        ss << ")\n";
+        ss << "{\n"; // Abre o bloco da função
+        ss << $5.traducao; // Código do bloco da função
+        ss << "}\n\n"; // Fecha a função
+        $$.traducao = ss.str();
+    }
+;
+
+INICIO_FUNCAO:
+    TK_FUNCAO TK_ID {
+        string nome = $2.label;
+        if(buscarVariavel(nome) != -1) {
+            cout << "O nome '" << nome << "' ja foi usado em outro lugar.\n";
+            exit(1);
+        }
+        // Adiciona a função na pilha
+        nomeFuncoes.push_back(nome);
+        definicoesFuncoes.push_back(ParametrosFuncao()); // Cria um novo conjunto de parâmetros para a função
+        $$.label = nome; // Guarda o nome da função
+        $$.traducao = ""; // Não gera código aqui
+    }
+;
+
+LISTA_PARAMETROS:
+    TIPO TK_ID {
+        string nome = $2.label;
+        string tipo = $1.label;
+        int dimensoes[] = {0, 0}; // Inicializa dimensões como 0
+        criarPilha();
+        definicoesFuncoes.back().push_back(tipo);
+        adicionaVar(nome, tipo, 0, dimensoes, false, true); // Adiciona a variável temporária na pilha
+        $$.label = tipo + " " + pilha[buscarVariavel(nome)][nome].endereco_memoria; // Guarda o nome do parâmetro
+        $$.traducao = ""; // Não gera código aqui
+    }
+    |TIPO TK_ID '['']'{
+        string nome = $2.label;
+        string tipo = $1.label;
+        int dimensoes[] = {INT_MAX, 0}; // Inicializa dimensões como vetor de 1 dimensão
+        if(tipo == "string") { tipo = "char*"; } // Converte string para char* para compatibilidade com C
+        criarPilha();
+        definicoesFuncoes.back().push_back(tipo);
+        adicionaVar(nome, tipo, 1, dimensoes, false, true); // Adiciona a variável temporária na pilha
+        // preciso criar um parametro para o tamanho do vetor
+        $$.label = tipo + "* " + pilha[buscarVariavel(nome)][nome].endereco_memoria; // Guarda o nome do parâmetro
+        $$.traducao = ""; // Não gera código aqui
+            
+    }
+    |TIPO TK_ID '[' ']' '[' ']'{
+        string nome = $2.label;
+        string tipo = $1.label;
+        int dimensoes[] = {INT_MAX, INT_MAX}; // Inicializa dimensões como matriz
+        if(tipo == "string") { tipo = "char*"; } // Converte string para char* para compatibilidade com C
+        criarPilha();
+        definicoesFuncoes.back().push_back(tipo);
+        adicionaVar(nome, tipo, 2, dimensoes, false, true); // Adiciona a variável temporária na pilha
+        $$.label = tipo + "* " + pilha[buscarVariavel(nome)][nome].endereco_memoria; // Guarda o nome do parâmetro
+        $$.traducao = ""; // Não gera código aqui
+    }
+    | LISTA_PARAMETROS ',' TIPO TK_ID '[' ']' '[' ']'{
+        string nome = $4.label;
+        string tipo = $3.label;
+        int dimensoes[] = {INT_MAX, INT_MAX}; // Inicializa dimensões como matriz
+        if(tipo == "string") { tipo = "char*"; } // Converte string para char* para compatibilidade com C
+        criarPilha();
+        definicoesFuncoes.back().push_back(tipo);
+        adicionaVar(nome, tipo, 2, dimensoes, false, true); // Adiciona a variável temporária na pilha
+        $$.label = $1.label + "," + tipo + "* " + pilha[buscarVariavel(nome)][nome].endereco_memoria; // Junta os nomes dos parâmetros
+        $$.traducao = ""; // Não gera código aqui
+    }
+    | LISTA_PARAMETROS ',' TIPO TK_ID '[' ']' {
+        string nome = $4.label;
+        string tipo = $3.label;
+        int dimensoes[] = {INT_MAX, 0}; // Inicializa dimensões como vetor de 1 dimensão
+        if(tipo == "string") { tipo = "char*"; } // Converte string para char* para compatibilidade com C
+        criarPilha();
+        definicoesFuncoes.back().push_back(tipo);
+        adicionaVar(nome, tipo, 1, dimensoes, false, true); // Adiciona a variável temporária na pilha
+        $$.label = $1.label + "," + tipo + "* " + pilha[buscarVariavel(nome)][nome].endereco_memoria; // Junta os nomes dos parâmetros
+        $$.traducao = ""; // Não gera código aqui
+    }
+    | LISTA_PARAMETROS ',' TIPO TK_ID {
+        string nome = $4.label;
+        string tipo = $3.label;
+        int dimensoes[] = {0, 0}; // Inicializa dimensões como 0
+        definicoesFuncoes.back().push_back(tipo);
+        adicionaVar(nome, tipo, 0, dimensoes, false, true); // Adiciona a variável temporária na pilha
+        $$.label = $1.label + "," + tipo + " " + pilha[buscarVariavel(nome)][nome].endereco_memoria; // Junta os nomes dos parâmetros
+        $$.traducao = ""; // Não gera código aqui
+    }
+    | /* vazio */ {
+        $$.label = "";
+        $$.traducao = "";
+    }
+;
+
+BLOCO_FUNCAO:
+    '{' COMANDOS SAIDA_FUNCAO '}' {
+    stringstream ss, free;
+
+	// Declarações das variáveis
+	string decls;
+
+	decls = fecharPilha(free).str();
+	
+	ss << decls;
+
+	if(!decls.empty() && !$2.traducao.empty()) {
+		ss << "\n";
+	}
+
+	// Comandos dentro do bloco
+    if(!$2.traducao.empty())
+        ss << $2.traducao;
+
+    ss << qtdTab() << $3.traducao; // Adiciona o retorno da função, se houver
+
+    if(free.str() != "")
+	    ss << qtdTab(1) << free.str();
+
+    $$.label = $3.label; // Tipo de retorno da função
+	$$.traducao = ss.str();
+    }
+;
+
+SAIDA_FUNCAO:
+    TK_RETURN EXPR ';' {
+        stringstream ss;
+        ss << qtdTab() << "return " << pilha[buscarVariavel($2.label)][$2.label].endereco_memoria << ";\n";
+        $$.label = pilha[buscarVariavel($2.label)][$2.label].tipo; // Tipo de retorno
+        $$.traducao = ss.str();
+    }
+    | /* vazio */ {
+        $$.label = "";
+        $$.traducao = "";
+    }
+;
+
+ENTRADA_PARAMETROS:
+    ENTRADA_PARAMETROS ',' EXPR {
+        $$.label = $1.label + "," + $3.label;
+        $$.traducao = $1.traducao + $3.traducao;
+    }
+    | EXPR {
+        string tipo = pilha[buscarVariavel($1.label)][$1.label].tipo;
+        $$.label = $1.label;
+        $$.traducao = $1.traducao;
+    }
+    | /* vazio */ {
+        $$.label = "";
+        $$.traducao = "";
+    }
 
 TIPO:
       TK_TIPO_INT   { $$.label = "int"; }
@@ -1467,6 +1658,54 @@ EXPR_ATOM:
         $$.label = temp; // O resultado desta expressão é a nova temporária
         $$.traducao = ss.str();
     }
+| TK_ID '(' ENTRADA_PARAMETROS ')' {
+        string nome_funcao = $1.label;
+        string parametros = $3.label;
+        stringstream endereco_parametros;
+        int idx_funcao = buscarVariavel(nome_funcao);
+
+        auto it = std::find(nomeFuncoes.begin(), nomeFuncoes.end(), nome_funcao);
+        if (it == nomeFuncoes.end()) {
+            yyerror("Funcao '" + nome_funcao + "' nao declarada.");
+        }
+        int idx_parametros = std::distance(nomeFuncoes.begin(), it);
+        ParametrosFuncao parametros_funcao = definicoesFuncoes[idx_parametros];
+        string saida = saidaFuncoes[idx_parametros];
+        // comparara parametro do usario com o da funcao
+        vector<string> parametros_usuario;
+        stringstream ss_parametros(parametros);
+        string item;
+        while (getline(ss_parametros, item, ',')) {
+                parametros_usuario.push_back(item);
+            }
+        if (parametros_usuario.size() != parametros_funcao.size()) {
+            yyerror("Numero de parametros da funcao '" + nome_funcao + "' nao confere com o esperado.");
+        }
+        for (size_t i = 0; i < parametros_usuario.size(); ++i) {
+            string tipo_parametro_usuario = pilha[buscarVariavel(parametros_usuario[i])][parametros_usuario[i]].tipo;
+            string tipo_parametro_funcao = parametros_funcao[i];
+            if(endereco_parametros.str().length() > 0) {
+                endereco_parametros << ", ";
+            }
+            endereco_parametros << pilha[buscarVariavel(parametros_usuario[i])][parametros_usuario[i]].endereco_memoria;
+            if (tipo_parametro_usuario != tipo_parametro_funcao) {
+                yyerror("Tipo do parametro '" + parametros_usuario[i] + "' nao confere com o esperado na funcao '" + nome_funcao + "'.");
+            }
+        }
+        stringstream ss;
+        ss << $3.traducao; // Código da expressão, se houver
+        if (saida == "void") {
+            ss << qtdTab() << nome_funcao << "(";
+        } else {
+            string tipo_saida = saida;
+            string temp_saida = newTemp(tipo_saida);
+            ss << qtdTab() << temp_saida << " = " << nome_funcao << "(";
+            $$.label = temp_saida; // O label é a CHAVE da nova temporária
+        }
+        ss << endereco_parametros.str(); // Adiciona os parâmetros
+        ss << ");\n"; // Chamada da função
+        $$.traducao = ss.str();
+    }
 ;
 COVERT_TYPE:
     TK_TIPO_INT '(' EXPR ')' {
@@ -1523,7 +1762,7 @@ void yyerror(string MSG) {
 	exit(1);
 }
 
-void adicionaVar(string nome, string tipo, int d, int N_d[2], bool temp, bool contador) {
+void adicionaVar(string nome, string tipo, int d, int N_d[2], bool temp, bool funcao) {
     if (buscarVariavel(nome) != -1) {
         cout << "Erro: Variável '" << nome << "' já declarada no escopo atual." << endl;
         exit(1);
@@ -1536,10 +1775,11 @@ void adicionaVar(string nome, string tipo, int d, int N_d[2], bool temp, bool co
     Escopo[nome].dimensoes[0] = N_d[0];
     Escopo[nome].dimensoes[1] = N_d[1];
     Escopo[nome].temporaria = temp;
-    Escopo[nome].contador = contador;
+    Escopo[nome].eh_funcao = funcao;
     Escopo[nome].malocada = false;
     // Gera o nome da variável C
     if (temp) Escopo[nome].endereco_memoria = "t" + to_string(tempVar++);
+    else if (funcao) Escopo[nome].endereco_memoria = "f" + to_string(defFuncao++);
     else Escopo[nome].endereco_memoria = "d" + to_string(defVar++);
 }
 
@@ -1572,7 +1812,7 @@ stringstream fecharPilha(stringstream& frees) {
 		for(const auto& [nome, info] : pilha.back()) {
 			if(info.temporaria)
 				ss << qtdTab() << tipoTraducao[info.tipo] <<" "<< info.endereco_memoria << ";\n";
-			else{
+			else if(!info.eh_funcao) {
                 if (info.eh_set) { // <-- ADICIONE ESTA CONDIÇÃO
                     ss << qtdTab() << "struct " << info.tipo << " " << info.endereco_memoria << ";\t //" << nome << "\n";
             } else if (info.num_dimensoes == 0)
@@ -1583,9 +1823,6 @@ stringstream fecharPilha(stringstream& frees) {
 			if(info.malocada){
 				frees << qtdTab(-1) << "free(" << info.endereco_memoria << ");\n";
 			}
-			if(info.contador){
-				count << qtdTab() << info.endereco_memoria << " = 0;\n";
-			}
 		}
 		defbloco--;
 		pilha.pop_back();
@@ -1594,7 +1831,7 @@ stringstream fecharPilha(stringstream& frees) {
 		cout << "Erro: Pilha de escopo vazia.\n";
 		exit(1);
 	}
-	all << ss.str() << count.str();
+	all << ss.str();
 	return all;
 }
 stringstream fecharPilha() {

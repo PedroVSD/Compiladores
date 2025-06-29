@@ -1,15 +1,9 @@
-set set{
-        int x;
-        int y;
-};
+function teste (int a[]){
+    return a[0];
+}
 
 int main() {
-    set haduken;
-    int resultado;
-
-    haduken.x = 1;
-    haduken.y = 9;
-
-    resultado = haduken.x + haduken.y;
-    output(resultado);
+    int a[5];
+    a[0] = 3;
+    output(teste(a));
 }

@@ -43,7 +43,8 @@ ID {LETRA}({LETRA}|{DIGITO})*
 "quicksort"       { return TK_QUICKSORT; }
 "set"       { return TK_CONJUNTO; } // set é a struct
 "."     { return TK_PONTO; } // ponto para acessar membros da struct
-
+"function" { return TK_FUNCAO; } // palavra-chave para definir funções
+"return"   { return TK_RETURN; }
 "true"      {
 	yylval.traducao = "true";
 	yylval.label = "true";
