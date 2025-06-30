@@ -20,7 +20,9 @@ ID {LETRA}({LETRA}|{DIGITO})*
 
 %%
 
-"int main"  { return TK_MAIN;}
+"var"      { return TK_VAR; }
+"let"      { return TK_LET; }
+"main"  { return TK_MAIN;}
 "int"       { return TK_TIPO_INT;}
 "float"     { return TK_TIPO_FLOAT;}
 "char"      { return TK_TIPO_CHAR;}

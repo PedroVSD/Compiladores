@@ -26,10 +26,10 @@ vector<string> nomeFuncoes;
 // Declaração de funções
 
 //Grupo da funções que mexem em Variáveis
-void adicionaVar(string nome, string tipo, int d, int N_d[2], bool temp = false, bool contador = false);
+void adicionaVar(string nome, string tipo, int d, int N_d[2], bool temp = false, bool funcao = false);
 string newTemp(string tipo, bool contador = false, bool malocada = false);
 int buscarVariavel(string nome);
-stringstream veririficarTipo(string nome, string op, string valor);
+stringstream operar(string nome, string op, string valor);
 
 // Grupo de funções que mexem com a pilha
 void criarPilha();
@@ -86,11 +86,10 @@ struct tabela{
     bool inicializado;          // Indica se a variável foi inicializada
     bool temporaria;            // Indica se é uma variável temporária
     int numero;                 // Se for um numero, guarda o valor numérico
-	bool contador;  //?
+	int contador;               // conta o tamanho
 	bool malocada; //?
     bool eh_set;                // Indica se é um conjunto (struct)
     bool eh_funcao;             // Indica se é uma função
-    bool eh_parametro;           // Indica se é um parâmetro de função  
 };
 
 struct RotulosDeLaço {
@@ -111,7 +110,8 @@ map<string, string> tipoTraducao = {
 	{"float", "float"},
 	{"char", "char"},
 	{"bool", "int"},
-	{"string", "char*"}
+	{"string", "char*"},
+    {"any", "void*"}
 };
 map<string, string> tipomascara{
 	{"int", "%d"},
@@ -137,54 +137,9 @@ string novoRotulo() {
     return "L" + to_string(defgoto++);
 }
 
-string gerarAssinaturaC(string nomes, string tipos) {
-    stringstream ss_nomes(nomes);
-    stringstream ss_tipos(tipos);
-    string nome, tipo;
-    stringstream assinatura;
-    bool primeiro = true;
-
-    while(getline(ss_nomes, nome, '|') && getline(ss_tipos, tipo, '|')) {
-        if (nome.empty()) continue;
-        if (!primeiro) {
-            assinatura << ", ";
-        }
-        string endereco = pilha.back()[nome].endereco_memoria;
-        if (tipo.find("[]") != string::npos) { // Se for um vetor
-            string tipo_base = tipo.substr(0, tipo.find("[]"));
-            assinatura << tipoTraducao[tipo_base] << "* " << endereco;
-        } else {
-            assinatura << tipoTraducao[tipo] << " " << endereco;
-        }
-        primeiro = false;
-    }
-    return assinatura.str();
-}
-
-// ... (na seção %{...%}, junto com outras funções auxiliares)
-
-// Gera a string de parâmetros para uma chamada de função em C (ex: "d0, t1")
-string gerarParametrosC(string labels) {
-    if (labels.empty()) return "";
-
-    stringstream ss_labels(labels);
-    string label;
-    stringstream resultado;
-    bool primeiro = true;
-
-    while(getline(ss_labels, label, '|')) {
-        if (!primeiro) {
-            resultado << ", ";
-        }
-        resultado << pilha[buscarVariavel(label)][label].endereco_memoria;
-        primeiro = false;
-    }
-    return resultado.str();
-}
-
 %}
 
-%token TK_NUM TK_ID TK_TIPO_INT TK_TIPO_FLOAT TK_MAIN
+%token TK_NUM TK_ID TK_TIPO_INT TK_TIPO_FLOAT TK_MAIN TK_VAR TK_LET
 %token TK_TIPO_CHAR TK_TIPO_BOOL
 %token TK_IGUAL TK_DIFERENTE TK_MAIOR_IGUAL TK_MENOR_IGUAL
 %token TK_AND TK_OR
@@ -356,8 +311,20 @@ LISTA_EXPRESSOES:
         stringstream ss;
         ss << $1.traducao; // Inclui o código que calcula a expressão
         
-        ss << qtdTab() << "printf(" << "\"" << tipomascara[tipo] << "\", " << var << ");\n"; 
-        
+        if(tipo == "any"){
+            cout << "Não é possível imprimir variáveis que ainda foram definidas.\n";
+            exit(1);
+        }
+        string tipoTraduzido = tipoTraducao[tipo]; // Converte o tipo para a tradução correta
+        if(tipoTraduzido == "char*")  tipoTraduzido = "char"; // Corrige para char se for string
+        if(pilha[buscarVariavel($1.label)][$1.label].malocada) {
+            if(tipo != "string")
+                ss << qtdTab() << "printf(\"" << tipomascara[tipo] << "\", ((" << tipoTraduzido << "*)" << var << ")[0]);\n"; // Adiciona a expressão à saída
+            else
+                ss << qtdTab() << "printf(\"" << tipomascara[tipo] << "\", (" << tipoTraduzido << "*)" << var << ");\n"; // Adiciona a expressão à saída
+        }
+        else
+            ss << qtdTab() << "printf(\"" << tipomascara[tipo] << "\", " << var << ");\n"; // Adiciona a expressão à saída
         $$.traducao = ss.str();
     }
     // Caso recursivo: Uma lista, vírgula, e mais uma expressão.
@@ -370,10 +337,20 @@ LISTA_EXPRESSOES:
         
         stringstream ss;
         ss << $3.traducao;
-
-        ss << qtdTab() << "printf(\"" << tipomascara[tipo] << "\", " << var << ");\n";
-
-                
+        if(tipo == "any"){
+            cout << "Não é possível imprimir variáveis que ainda foram definidas.\n";
+            exit(1);
+        }
+        string tipoTraduzido = tipoTraducao[tipo]; // Converte o tipo para a tradução correta
+        if(tipoTraduzido == "char*")  tipoTraduzido = "char"; // Corrige para char se for string
+        if(pilha[buscarVariavel($3.label)][$3.label].malocada) {
+            if(tipo != "string")
+                ss << qtdTab() << "printf(\"" << tipomascara[tipo] << "\", ((" << tipoTraduzido << "*)" << var << ")[0]);\n"; // Adiciona a expressão à saída
+            else
+                ss << qtdTab() << "printf(\"" << tipomascara[tipo] << "\", (" << tipoTraduzido << "*)" << var << ");\n"; // Adiciona a expressão à saída
+        }
+        else
+            ss << qtdTab() << "printf(\"" << tipomascara[tipo] << "\", " << var << ");\n"; // Adiciona a expressão à saída   
         $$.traducao = $1.traducao + ss.str();
     }
 ;
@@ -470,51 +447,248 @@ COMANDO_ENTRADA:
 ;*/
 
 LISTA_VARIAVEIS:
-    TK_ID {
+    TK_ID TIPO {
         int idx = buscarVariavel($1.label);
         if (idx == -1) { yyerror("Variavel '" + $1.label + "' nao declarada para 'leia'."); }
 
         string tipo = pilha[idx][$1.label].tipo;
-        string c_nome = pilha[idx][$1.label].endereco_memoria;
-        
+        string tipo2 = $2.label;
+        string c_nome = newTemp(tipo2, false, false);
+        string var = pilha[idx][$1.label].endereco_memoria;
         stringstream ss_code;
-        if (tipo == "string") {
-            inputString = true; 
+        if (tipo2 == "string") {
+            inputString = true;
+            pilha[idx][c_nome].malocada = true; // Marca que a string foi alocada dinamicamente
             ss_code << qtdTab() << c_nome << " = input_string();\n";
 		}
-		else if (tipo == "bool") {
+		else if (tipo2 == "bool") {
 			inputBool = true; 
 			ss_code << qtdTab() << c_nome << " = input_bool();\n";
 			}
         else {
-            ss_code << qtdTab() << "scanf(\"" << tipomascara[tipo] << "\", &" << c_nome << ");\n";
+            ss_code << qtdTab() << "scanf(\"" << tipomascara[tipo2] << "\", &" << c_nome << ");\n";
         }
+        ss_code << operar($1.label, "=", c_nome).str();
         $$.traducao = ss_code.str();
     }
-    | LISTA_VARIAVEIS ',' TK_ID {
+    | LISTA_VARIAVEIS ',' TK_ID TIPO {
 
         // A lógica é idêntica para o caso recursivo
         int idx = buscarVariavel($3.label);
         if (idx == -1) { yyerror("Variavel '" + $3.label + "' nao declarada para 'leia'."); }
 
         string tipo = pilha[idx][$3.label].tipo;
-        string c_nome = pilha[idx][$3.label].endereco_memoria;
-        
+        string tipo2 = $4.label;
+        string c_nome = newTemp(tipo2, false, false);
+        string var = pilha[idx][$3.label].endereco_memoria;
         stringstream ss_code;
 
-        if (tipo == "string") {
+        if (tipo2 == "string") {
             inputString = true; 
 			pilha[idx][c_nome].malocada = true; // Marca que a string foi alocada dinamicamente
             ss_code << qtdTab() << c_nome << " = input_string();\n";
 		}
-		else if (tipo == "bool") {
+		else if (tipo2 == "bool") {
 			inputBool = true;
 			ss_code << qtdTab() << c_nome << " = input_bool();\n";
 			}
         else {
-            ss_code << qtdTab() << "scanf(\"" << tipomascara[tipo] << "\", &" << c_nome << ");\n";
+            ss_code << qtdTab() << "scanf(\"" << tipomascara[tipo2] << "\", &" << c_nome << ");\n";
         }
+        ss_code << operar($3.label, "=", c_nome).str();
+        $$.traducao = $1.traducao + ss_code.str();
+    }
+    | TK_ID '[' EXPR ']'{
+        if(buscarVariavel($1.label) == -1) {
+            yyerror("Vetor '" + $1.label + "' não foi declarado.");
+        }
+        string tipo = pilha[buscarVariavel($1.label)][$1.label].tipo;
+        string endereco_vetor = pilha[buscarVariavel($1.label)][$1.label].endereco_memoria;
+        string nome = $1.label;
+        int idx = pilha[buscarVariavel($3.label)][$3.label].numero;
+
+        if(pilha[buscarVariavel(nome)][nome].num_dimensoes != 1) {
+            cout << "O vetor '" << nome << "' deve ser unidimensional.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel($3.label)][$3.label].tipo != "int") {
+            cout << "O índice do vetor '" << nome << "' deve ser um inteiro escalar.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel($3.label)][$3.label].num_dimensoes != 0) {
+            cout << "O índice do vetor '" << nome << "' deve ser um inteiro escalar.\n";
+            exit(1);
+        }
+        if((pilha[buscarVariavel(nome)][nome].dimensoes[0] <= idx || idx < 0) && idx != -1) {
+            cout << "O índice do vetor '" << nome << "' está fora dos limites.\n";
+            exit(1);
+        }
+
+        string temp = newTemp(tipo, false, false);
+        stringstream ss_code;
+
+        ss_code << $3.traducao; // Inclui a tradução anterior
+        if(tipo == "string") {
+            inputString = true;
+            pilha[buscarVariavel($1.label)][$1.label].malocada = true; // Marca que a string foi alocada dinamicamente
+            ss_code << qtdTab() << temp << " = input_string();\n";
+        }
+        else if (tipo == "bool") {
+            inputBool = true;
+            ss_code << qtdTab() << temp << " = input_bool();\n";
+        }
+        else {
+            ss_code << qtdTab() << "scanf(\"" << tipomascara[tipo] << "\", &" << temp << ");\n";
+        }
+        ss_code << qtdTab() << endereco_vetor << "[" << pilha[buscarVariavel($3.label)][$3.label].endereco_memoria << "] = " << temp << ";\n";
+        $$.traducao = ss_code.str();
+    }
+    | LISTA_VARIAVEIS ',' TK_ID '[' EXPR ']'{
+        if(buscarVariavel($3.label) == -1) {
+            yyerror("Vetor '" + $1.label + "' não foi declarado.");
+        }
+        string tipo = pilha[buscarVariavel($3.label)][$3.label].tipo;
+        string endereco_vetor = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria;
+        string nome = $3.label;
+        int idx = pilha[buscarVariavel($3.label)][$3.label].numero;
         
+        if(pilha[buscarVariavel(nome)][nome].num_dimensoes != 1) {
+            cout << "O vetor '" << nome << "' deve ser unidimensional.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel($3.label)][$3.label].tipo != "int") {
+            cout << "O índice do vetor '" << nome << "' deve ser um inteiro escalar.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel($3.label)][$3.label].num_dimensoes != 0) {
+            cout << "O índice do vetor '" << nome << "' deve ser um inteiro escalar.\n";
+            exit(1);
+        }
+        if((pilha[buscarVariavel(nome)][nome].dimensoes[0] <= idx || idx < 0) && idx != -1) {
+            cout << "O índice do vetor '" << nome << "' está fora dos limites.\n";
+            exit(1);
+        }
+
+        string temp = newTemp(tipo, false, false);
+        stringstream ss_code;
+
+        ss_code << $3.traducao; 
+        if(tipo == "string") {
+            inputString = true;
+            pilha[buscarVariavel($3.label)][$3.label].malocada = true; // Marca que a string foi alocada dinamicamente
+            ss_code << qtdTab() << temp << " = input_string();\n";
+        }
+        else if (tipo == "bool") {
+            inputBool = true;
+            ss_code << qtdTab() << temp << " = input_bool();\n";
+        }
+        else {
+            ss_code << qtdTab() << "scanf(\"" << tipomascara[tipo] << "\", &" << temp << ");\n";
+        }
+        ss_code << qtdTab() << endereco_vetor << "[" << pilha[buscarVariavel($5.label)][$5.label].endereco_memoria << "] = " << temp << ";\n";
+        $$.traducao = $1.traducao + ss_code.str();
+    }
+    | TK_ID '[' EXPR ']' '[' EXPR ']'{
+        if(buscarVariavel($1.label) == -1) {
+            yyerror("Matriz '" + $1.label + "' não foi declarada.");
+        }
+        string tipo = pilha[buscarVariavel($1.label)][$1.label].tipo;
+        string endereco_matriz = pilha[buscarVariavel($1.label)][$1.label].endereco_memoria;
+        string nome = $1.label;
+        int idx_linha = pilha[buscarVariavel($3.label)][$3.label].numero;
+        int idx_coluna = pilha[buscarVariavel($6.label)][$6.label].numero;
+
+        if(pilha[buscarVariavel(nome)][nome].num_dimensoes != 2) {
+            cout << "A matriz '" << nome << "' deve ser bidimensional.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel($3.label)][$3.label].tipo != "int" || pilha[buscarVariavel($6.label)][$6.label].tipo != "int") {
+            cout << "Os índices da matriz '" << nome << "' devem ser inteiros escalares.\n";
+            exit(1);
+        }
+        if((pilha[buscarVariavel(nome)][nome].dimensoes[0] <= idx_linha || idx_linha < 0) && idx_linha != -1) {
+            cout << "O índice da linha da matriz '" << nome << "' está fora dos limites.\n";
+            exit(1);
+        }
+        if((pilha[buscarVariavel(nome)][nome].dimensoes[1] <= idx_coluna || idx_coluna < 0) && idx_coluna != -1) {
+            cout << "O índice da coluna da matriz '" << nome << "' está fora dos limites.\n";
+            exit(1);
+        }
+
+        string temp = newTemp(tipo, false, false);
+        stringstream ss_code;
+
+        ss_code << $3.traducao; // Inclui a tradução anterior
+        ss_code << $6.traducao; // Inclui a tradução anterior
+        if(tipo == "string") {
+            inputString = true;
+            pilha[buscarVariavel($1.label)][$1.label].malocada = true; // Marca que a string foi alocada dinamicamente
+            ss_code << qtdTab() << temp << " = input_string();\n";
+        }
+        else if (tipo == "bool") {
+            inputBool = true;
+            ss_code << qtdTab() << temp << " = input_bool();\n";
+        }
+        else {
+            ss_code << qtdTab() << "scanf(\"" << tipomascara[tipo] << "\", &" << temp << ");\n";
+        }
+        string temp2 = newTemp("int"); // Temporária para o cálculo do offset
+        string temp3 = newTemp("int"); // Temporária para o cálculo do offset
+        ss_code << qtdTab() << temp2 << " = " << pilha[buscarVariavel($3.label)][$3.label].endereco_memoria << " * " << pilha[buscarVariavel(nome)][nome].dimensoes[1] << ";\n";
+        ss_code << qtdTab() << temp3 << " = " << temp2 << " + " << pilha[buscarVariavel($6.label)][$6.label].endereco_memoria << ";\n";
+        ss_code << qtdTab() << pilha[buscarVariavel(nome)][nome].endereco_memoria << "[" << temp3 << "] = " << temp << ";\n"; // Atribuição ao elemento da matriz
+   
+        $$.traducao = ss_code.str();
+    }
+    | LISTA_VARIAVEIS ',' TK_ID '[' EXPR ']' '[' EXPR ']'{
+        if(buscarVariavel($3.label) == -1) {
+            yyerror("Matriz '" + $3.label + "' não foi declarada.");
+        }
+        string tipo = pilha[buscarVariavel($3.label)][$3.label].tipo;
+        string endereco_matriz = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria;
+        string nome = $3.label;
+        int idx_linha = pilha[buscarVariavel($5.label)][$5.label].numero;
+        int idx_coluna = pilha[buscarVariavel($8.label)][$8.label].numero;
+
+        if(pilha[buscarVariavel(nome)][nome].num_dimensoes != 2) {
+            cout << "A matriz '" << nome << "' deve ser bidimensional.\n";
+            exit(1);
+        }
+        if(pilha[buscarVariavel($5.label)][$5.label].tipo != "int" || pilha[buscarVariavel($8.label)][$8.label].tipo != "int") {
+            cout << "Os índices da matriz '" << nome << "' devem ser inteiros escalares.\n";
+            exit(1);
+        }
+        if((pilha[buscarVariavel(nome)][nome].dimensoes[0] <= idx_linha || idx_linha < 0) && idx_linha != -1) {
+            cout << "O índice da linha da matriz '" << nome << "' está fora dos limites.\n";
+            exit(1);
+        }
+        if((pilha[buscarVariavel(nome)][nome].dimensoes[1] <= idx_coluna || idx_coluna < 0) && idx_coluna != -1) {
+            cout << "O índice da coluna da matriz '" << nome << "' está fora dos limites.\n";
+            exit(1);
+        }
+
+        string temp = newTemp(tipo, false, false);
+        stringstream ss_code;
+
+        ss_code << $5.traducao; // Inclui a tradução anterior
+        ss_code << $8.traducao; // Inclui a tradução anterior
+        if(tipo == "string") {
+            inputString = true;
+            pilha[buscarVariavel($1.label)][$1.label].malocada = true; // Marca que a string foi alocada dinamicamente
+            ss_code << qtdTab() << temp << " = input_string();\n";
+        }
+        else if (tipo == "bool") {
+            inputBool = true;
+            ss_code << qtdTab() << temp << " = input_bool();\n";
+        }
+        else {
+            ss_code << qtdTab() << "scanf(\"" << tipomascara[tipo] << "\", &" << temp << ");\n";
+        }
+        string temp2 = newTemp("int"); // Temporária para o cálculo do offset
+        string temp3 = newTemp("int"); // Temporária para o cálculo do offset
+        ss_code << qtdTab() << temp2 << " = " << pilha[buscarVariavel($5.label)][$5.label].endereco_memoria << " * " << pilha[buscarVariavel(nome)][nome].dimensoes[1] << ";\n";
+        ss_code << qtdTab() << temp3 << " = " << temp2 << " + " << pilha[buscarVariavel($8.label)][$8.label].endereco_memoria << ";\n";
+        ss_code << qtdTab() << pilha[buscarVariavel(nome)][nome].endereco_memoria << "[" << temp3 << "] = " << temp << ";\n"; // Atribuição ao elemento da matriz
         $$.traducao = $1.traducao + ss_code.str();
     }
 ;
@@ -742,9 +916,11 @@ BLOCO_FUNCAO:
 SAIDA_FUNCAO:
     TK_RETURN EXPR ';' {
         stringstream ss;
+        string tipo = pilha[buscarVariavel($2.label)][$2.label].tipo;
         ss << $2.traducao; // Gera o código da expressão a ser retornada
         string enderecoExpr = pilha[buscarVariavel($2.label)][$2.label].endereco_memoria;
         ss << qtdTab() << "return " << enderecoExpr << ";\n";
+        $$.label = tipo; // Tipo de retorno da função
         $$.traducao = ss.str();
     }
     | /* vazio */ {
@@ -777,34 +953,34 @@ TIPO:
 ;
 
 DECLAR_VAR:
-    TIPO TK_ID {
+    TK_VAR TK_ID {
         string nome = $2.label;
-        string tipo = $1.label;
-        int dimensoes[] = {0, 0}; // Inicializa dimensões como 0
+        string tipo = "any";
+        int dimensoes[] = {0, 0};
         adicionaVar(nome, tipo, 0, dimensoes, false, false);
+        $$.label = nome;
         $$.traducao = "";
     }   
-    | TIPO TK_ID '=' EXPR {
+    | TK_VAR TK_ID '=' EXPR {
         string nome = $2.label;
-        string tipo = $1.label;
-        int dimensoes[] = {0, 0}; // Inicializa dimensões como 0
+        string tipo = "any";
+        int dimensoes[] = {0, 0}; 
         adicionaVar(nome, tipo, 0, dimensoes, false, false);
         pilha[pilha.size()-1][nome].inicializado = true;
         stringstream ss;
-        ss = veririficarTipo($2.label, "=", $4.label);
+        ss = operar(nome, "=", $4.label);
+        $$.label = nome;
         $$.traducao = $4.traducao + ss.str();
     }
-    | TIPO TK_ID '=' TK_CHAR {
+    | TK_VAR TK_ID '=' TK_CHAR {
         string nome = $2.label;
-        string tipo = $1.label;
-        int dimensoes[] = {0, 0}; // Inicializa dimensões como 0
+        string tipo = pilha[buscarVariavel($4.label)][$4.label].tipo;
+        int dimensoes[] = {0, 0};
         adicionaVar(nome, tipo, 0, dimensoes, false, false);
-        if(tipo != "char") {
-            cout << "Atribuindo char a variavel '" << nome << "' do tipo '" << tipo << "'\n";
-            exit(1);}
         pilha[pilha.size()-1][nome].inicializado = true; 
         stringstream ss;
         ss << qtdTab() << pilha[pilha.size()-1][nome].endereco_memoria << " = " << $4.label << ";\n";
+        $$.label = nome;
         $$.traducao = ss.str();
     }
     | TIPO TK_ID '[' EXPR ']' {
@@ -832,6 +1008,7 @@ DECLAR_VAR:
         }
 
         stringstream ss;
+        ss << $4.traducao; // Inclui a expressão que calcula o tamanho do vetor
         string endereco = pilha[buscarVariavel(nome_vetor)][nome_vetor].endereco_memoria;
         string temp = newTemp("int");
         if(tipo_elemento == "string") tipo_elemento = "char"; 
@@ -866,12 +1043,15 @@ DECLAR_VAR:
         }
       
         stringstream ss;
+        ss << $4.traducao; // Inclui a expressão que calcula o número de linhas
+        ss << $7.traducao; // Inclui a expressão que calcula o número de colunas
+        // Calcula o tamanho total da matriz
         string endereco = pilha[buscarVariavel(nome_matriz)][nome_matriz].endereco_memoria;   
         string temp1 = newTemp("int");
         string temp2 = newTemp("int");
         if(tipo_elemento == "string") tipo_elemento = "char";
         ss << qtdTab() << temp1 << " = " << pilha[buscarVariavel(linha)][linha].endereco_memoria << " * " << pilha[buscarVariavel(colunas)][colunas].endereco_memoria << ";\n";
-        ss << qtdTab() << temp2 << " = " << pilha[buscarVariavel(linha)][linha].endereco_memoria << " * " << tipoTamanho[tipo_elemento] << ";\n";
+        ss << qtdTab() << temp2 << " = " << temp1 << " * " << tipoTamanho[tipo_elemento] << ";\n";
         ss << qtdTab() << endereco << " = (" << tipoTraducao[tipo_elemento] << "*)malloc(" << temp2 << ");\n";
         $$.traducao = ss.str();
     }
@@ -899,75 +1079,10 @@ ATRIB:
             yyerror("Variavel '" + $1.label + "' nao declarada."); 
         }
         stringstream ss;
-        ss = veririficarTipo($1.label, "=", $3.label);
+        ss = operar($1.label, "=", $3.label);
         $$.traducao = $3.traducao + ss.str();
     }
-    | TK_ID TK_MAIS_IGUAL EXPR {
-        string nomeVar = $1.label;
-        string enderecoVar = pilha[buscarVariavel(nomeVar)][nomeVar].endereco_memoria;
-        string tipoVar = pilha[buscarVariavel(nomeVar)][nomeVar].tipo;
-        
-        string temp = newTemp(tipoVar);
-        string enderecoTemp = pilha.back()[temp].endereco_memoria;
-        string enderecoExpr = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria;
-
-        stringstream ss;
-        ss << $3.traducao; // Gera código da expressão da direita
-        ss << qtdTab() << enderecoTemp << " = " << enderecoVar << " + " << enderecoExpr << ";\n";
-        ss << qtdTab() << enderecoVar << " = " << enderecoTemp << ";\n";
-        $$.traducao = ss.str();
-    }
-    // Regra para -=
-    | TK_ID TK_MENOS_IGUAL EXPR {
-        string nomeVar = $1.label;
-        string enderecoVar = pilha[buscarVariavel(nomeVar)][nomeVar].endereco_memoria;
-        string tipoVar = pilha[buscarVariavel(nomeVar)][nomeVar].tipo;
-        
-        string temp = newTemp(tipoVar);
-        string enderecoTemp = pilha.back()[temp].endereco_memoria;
-        string enderecoExpr = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria;
-
-        stringstream ss;
-        ss << $3.traducao; // Gera código da expressão da direita
-        ss << qtdTab() << enderecoTemp << " = " << enderecoVar << " - " << enderecoExpr << ";\n";
-        ss << qtdTab() << enderecoVar << " = " << enderecoTemp << ";\n";
-        $$.traducao = ss.str();
-    }
-
-    // Regra para *=
-    | TK_ID TK_MULT_IGUAL EXPR {
-        string nomeVar = $1.label;
-        string enderecoVar = pilha[buscarVariavel(nomeVar)][nomeVar].endereco_memoria;
-        string tipoVar = pilha[buscarVariavel(nomeVar)][nomeVar].tipo;
-        
-        string temp = newTemp(tipoVar);
-        string enderecoTemp = pilha.back()[temp].endereco_memoria;
-        string enderecoExpr = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria;
-
-        stringstream ss;
-        ss << $3.traducao;
-        ss << qtdTab() << enderecoTemp << " = " << enderecoVar << " * " << enderecoExpr << ";\n";
-        ss << qtdTab() << enderecoVar << " = " << enderecoTemp << ";\n";
-        $$.traducao = ss.str();
-    }
-
-    // Regra para /=
-    | TK_ID TK_DIV_IGUAL EXPR {
-        string nomeVar = $1.label;
-        string enderecoVar = pilha[buscarVariavel(nomeVar)][nomeVar].endereco_memoria;
-        string tipoVar = pilha[buscarVariavel(nomeVar)][nomeVar].tipo;
-        
-        string temp = newTemp(tipoVar);
-        string enderecoTemp = pilha.back()[temp].endereco_memoria;
-        string enderecoExpr = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria;
-
-        stringstream ss;
-        ss << $3.traducao;
-        ss << qtdTab() << enderecoTemp << " = " << enderecoVar << " / " << enderecoExpr << ";\n";
-        ss << qtdTab() << enderecoVar << " = " << enderecoTemp << ";\n";
-        $$.traducao = ss.str();
-    }
-   | TK_ID '[' EXPR ']' '=' EXPR {
+    | TK_ID '[' EXPR ']' '=' EXPR {
 
         string nome = $1.label;
         string tipo1 = pilha[buscarVariavel(nome)][nome].tipo;
@@ -994,7 +1109,7 @@ ATRIB:
             cout << "Vetor '" << nome << "' nao pode ter indice negativo.\n";
             exit(1);
         }
-        if(pilha[buscarVariavel(idx)][idx].dimensoes[0] < pilha[buscarVariavel(idx)][idx].numero) {
+        if(pilha[buscarVariavel(idx)][idx].dimensoes[0] < pilha[buscarVariavel(idx)][idx].numero && pilha[buscarVariavel(idx)][idx].numero != -1) {
             cout << "Indice do vetor '" << nome << "' fora dos limites.\n";
             exit(1);
         }
@@ -1019,13 +1134,12 @@ ATRIB:
 
         $$.traducao = ss.str();
     }
-
-   | TK_ID '[' EXPR ']' '[' EXPR ']' '=' EXPR {
+    | TK_ID '[' EXPR ']' '[' EXPR ']' '=' EXPR {
         
         string nome = $1.label;
         string tipo1 = pilha[buscarVariavel(nome)][nome].tipo;
 
-        string nome2 = $8.label;
+        string nome2 = $9.label;
         string tipo2 = pilha[buscarVariavel(nome2)][nome2].tipo;
 
         string idx_linha = $3.label;
@@ -1043,8 +1157,8 @@ ATRIB:
             cout << idx_linha << " ou " << idx_coluna << " ja foi declarado como vetor ou matriz.\n";
             exit(1);
         }
-        if (pilha[buscarVariavel(idx_linha)][idx_linha].numero < 0 || pilha[buscarVariavel(idx_coluna)][idx_coluna].numero < 0) {
-            cout << "Matriz '" << nome << "' nao pode ter indices negativos.\n";
+        if (((pilha[buscarVariavel(idx_linha)][idx_linha].numero >= 0 || pilha[buscarVariavel(idx_coluna)][idx_coluna].numero >= 0) && (pilha[buscarVariavel(nome)][nome].dimensoes[0] <= pilha[buscarVariavel(idx_linha)][idx_linha].numero || pilha[buscarVariavel(nome)][nome].dimensoes[1] <= pilha[buscarVariavel(idx_coluna)][idx_coluna].numero)) && (pilha[buscarVariavel(idx_linha)][idx_linha].numero != -1 || pilha[buscarVariavel(idx_coluna)][idx_coluna].numero != -1)) {
+            cout << "Os indices da matriz '" << nome << "' nao estão fora do escopo.\n";
             exit(1);
         }
         if (pilha[buscarVariavel(nome)][nome].num_dimensoes != 2) {
@@ -1104,6 +1218,29 @@ ATRIB:
         
         $$.traducao = ss.str();
     }
+            | TK_ID TK_INCREMENTO {
+		string var1 = $1.label;
+		string var2 = newTemp(pilha[buscarVariavel(var1)][var1].tipo);
+        stringstream ss;
+        ss << qtdTab() << var2 << " = " << "1;\n"; // Cria uma temporária com valor 1
+		ss << operar(var1, "+", var2).str(); // Operação de incremento
+        string temp = "t" + to_string(tempVar-1);   		
+        ss << operar(var1, "=", temp).str(); // Atribuição
+        $$.label = "t" + to_string(tempVar-1);
+		$$.traducao = ss.str();
+    }
+    // Regra para PÓS-DECREMENTO (ex: a--)
+    | TK_ID TK_DECREMENTO {
+		string var1 = $1.label;
+		string var2 = newTemp(pilha[buscarVariavel(var1)][var1].tipo);
+        stringstream ss;
+        ss << qtdTab() << var2 << " = " << "1;\n"; // Cria uma temporária com valor 1
+		ss << operar(var1, "-", var2).str(); // Operação de incremento
+        string temp = "t" + to_string(tempVar-1);   		
+        ss << operar(var1, "=", temp).str(); // Atribuição
+        $$.label = "t" + to_string(tempVar-1);
+		$$.traducao = ss.str();
+    }
 ;
 
 LOOP:
@@ -1114,13 +1251,19 @@ LOOP:
         string fimDoLaço = $1.traducao;
         string temp_cond = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria;
 
+        if (pilha[buscarVariavel($3.label)][$3.label].tipo != "bool") {
+            yyerror("Condição do while deve ser do tipo booleano.");
+        }
+
         stringstream ss;
+        ss << "//INÍCIO DO WHILE\n";
         ss << "\n" << qtdTab() << inícioDoLaço << ":\n";    // Rótulo para o CONTINUE
         ss << $3.traducao;                                    // Código da condição
         ss << qtdTab(1) << "if (!" << temp_cond << ") goto " << fimDoLaço << ";\n";
         ss << $5.traducao;                                    // Corpo do laço
         ss << qtdTab(1) << "goto " << inícioDoLaço << ";\n";  // Volta para o início
-        ss << qtdTab() << fimDoLaço << ":;\n";                // Rótulo para o BREAK
+        ss << qtdTab() << fimDoLaço << ":;\n";               // Rótulo para o BREAK
+        ss << "//FIM DO WHILE\n";
         $$.traducao = ss.str();
 
         if (!pilhaDeRotulosDeLaços.empty()) { pilhaDeRotulosDeLaços.pop_back(); }
@@ -1130,6 +1273,29 @@ LOOP:
     | FOR_INICIO '(' DECLAR_VAR ';' EXPR ';' ATRIB ')' BLOCO {
         // Ação Final do For
         if (!pilhaDeRotulosDeLaços.empty()) { pilhaDeRotulosDeLaços.pop_back(); }
+
+        if ($3.label.empty()) {
+            yyerror("Variável de controle do for não declarada.");
+        }
+        if(pilha[buscarVariavel($3.label)][$3.label].inicializado == false) {
+            yyerror("Variável de controle do for não inicializada.");
+        }
+        if(pilha[buscarVariavel($3.label)][$3.label].num_dimensoes > 0) {
+            yyerror("Variável de controle do for não pode ser um vetor ou matriz.");
+        }
+        if(pilha[buscarVariavel($3.label)][$3.label].tipo != "int") {
+            yyerror("Variável de controle do for deve ser do tipo inteiro.");
+        }
+        if (pilha[buscarVariavel($5.label)][$5.label].tipo != "bool") {
+            yyerror("Condição do for deve ser do tipo booleano.");
+        }
+        if(pilha[buscarVariavel($7.label)][$7.label].num_dimensoes > 0) {
+            yyerror("Variável de iteração do for não pode ser um vetor ou matriz.");
+        }
+        if(pilha[buscarVariavel($7.label)][$7.label].tipo != "int") {
+            yyerror("Variável de iteração do for deve ser do tipo inteiro.");
+        }
+
 
         // $1 é FOR_INICIO, contém os rótulos como "teste|iteracao|fim"
         string labels_str = $1.label;
@@ -1142,7 +1308,7 @@ LOOP:
         string temp_cond = pilha[buscarVariavel($5.label)][$5.label].endereco_memoria;
 
         stringstream ss;
-        ss << "\n" << qtdTab(-1) << "{\n";
+        ss << "//INÍCIO DO FOR\n";
         ss << fecharPilha().str();
         ss << "\n";
         ss << $3.traducao;                          // 1. Inicialização
@@ -1162,7 +1328,7 @@ LOOP:
         ss << qtdTab(1) << "goto " << rótuloIteração << ";\n"; // Volta para o passo de iteração
         
         ss << qtdTab(1) << rótuloFim << ":;\n";      // 6. Rótulo do BREAK
-        ss << qtdTab(1) << "}\n";
+        ss << "//FIM DO FOR\n";
         $$.traducao = ss.str();
     }
 
@@ -1174,8 +1340,12 @@ LOOP:
         string fimDoLaço = $1.traducao;     // Break
         string temp_cond = pilha[buscarVariavel($5.label)][$5.label].endereco_memoria;
 
+        if (pilha[buscarVariavel($5.label)][$5.label].tipo != "bool") {
+            yyerror("Condição do do-while deve ser do tipo booleano.");
+        }
+
         stringstream ss;
-        ss << "\n" << qtdTab(-1) << "{\n";
+        ss << "//INÍCIO DO DO-WHILE\n";
         ss << fecharPilha().str();
         ss << "\n";
         ss << qtdTab(1) << inícioDoLaço << ":\n";
@@ -1184,7 +1354,7 @@ LOOP:
         ss << $5.traducao;                         // Condição
         ss << qtdTab(1) << "if (" << temp_cond << ") goto " << inícioDoLaço << ";\n";
         ss << qtdTab(1) << fimDoLaço << ":;\n";      // Rótulo para o break
-        ss << qtdTab() << "}\n";
+        ss << "//FIM DO DO-WHILE\n";
         $$.traducao = ss.str();
     }
     | TK_BREAK ';' { 
@@ -1478,7 +1648,7 @@ EXPR_ARIT:
 		stringstream ss;
 		string var1 = $1.label;
 		string var2 = $3.label;
-		ss = veririficarTipo(var1, "+", var2);
+		ss = operar(var1, "+", var2);
 		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
         }
@@ -1486,61 +1656,36 @@ EXPR_ARIT:
         stringstream ss;
 		string var1 = $1.label;
 		string var2 = $3.label;
-		ss = veririficarTipo(var1, "-", var2);
+		ss = operar(var1, "-", var2);
 		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 
 	}
+    | TK_ID TK_MAIS_IGUAL EXPR_TERM {
+		stringstream ss;
+		string var1 = $1.label;
+		string var2 = $3.label;
+		ss = operar(var1, "+", var2);
+        string temp = "t" + to_string(tempVar-1);   		
+        ss << operar(var1, "=", temp).str(); // Atribuição
+        $$.label = "t" + to_string(tempVar-1);
+		$$.traducao = $3.traducao + ss.str();
+    }
+    // Regra para -=
+    | TK_ID TK_MENOS_IGUAL EXPR_TERM {
+		stringstream ss;
+		string var1 = $1.label;
+		string var2 = $3.label;
+		ss = operar(var1, "-", var2);
+        string temp = "t" + to_string(tempVar-1);   		
+        ss << operar(var1, "=", temp).str(); // Atribuição
+        $$.label = "t" + to_string(tempVar-1);
+		$$.traducao = $3.traducao + ss.str();
+    }
     | EXPR_TERM {
         $$.label = $1.label;
         $$.traducao = $1.traducao;
     }
-    | '-' EXPR %prec UMINUS {
-        string tipoExpr = pilha[buscarVariavel($2.label)][$2.label].tipo;
-        string temp = newTemp(tipoExpr);
-        string enderecoTemp = pilha.back()[temp].endereco_memoria;
-        string enderecoExpr = pilha[buscarVariavel($2.label)][$2.label].endereco_memoria;
-
-        stringstream ss;
-        ss << $2.traducao;
-        ss << qtdTab() << enderecoTemp << " = 0 - " << enderecoExpr << ";\n";
-        $$.label = temp;
-        $$.traducao = ss.str();
-    }
-    | TK_ID TK_INCREMENTO {
-        string nomeVar = $1.label;
-        string enderecoVar = pilha[buscarVariavel(nomeVar)][nomeVar].endereco_memoria;
-        string tipoVar = pilha[buscarVariavel(nomeVar)][nomeVar].tipo;
-
-        string temp_old_val = newTemp(tipoVar); // Guarda o valor antigo
-        string temp_new_val = newTemp(tipoVar); // Guarda o valor novo
-
-        stringstream ss;
-        ss << qtdTab() << pilha.back()[temp_old_val].endereco_memoria << " = " << enderecoVar << ";\n";
-        ss << qtdTab() << pilha.back()[temp_new_val].endereco_memoria << " = " << enderecoVar << " + 1;\n";
-        ss << qtdTab() << enderecoVar << " = " << pilha.back()[temp_new_val].endereco_memoria << ";\n";
-        
-        $$.label = temp_old_val; // O valor da expressão é o valor *antes* do incremento
-        $$.traducao = ss.str();
-    }
-    // Regra para PÓS-DECREMENTO (ex: a--)
-    | TK_ID TK_DECREMENTO {
-        string nomeVar = $1.label;
-        string enderecoVar = pilha[buscarVariavel(nomeVar)][nomeVar].endereco_memoria;
-        string tipoVar = pilha[buscarVariavel(nomeVar)][nomeVar].tipo;
-
-        string temp_old_val = newTemp(tipoVar); // Guarda o valor antigo
-        string temp_new_val = newTemp(tipoVar); // Guarda o valor novo
-
-        stringstream ss;
-        ss << qtdTab() << pilha.back()[temp_old_val].endereco_memoria << " = " << enderecoVar << ";\n";
-        ss << qtdTab() << pilha.back()[temp_new_val].endereco_memoria << " = " << enderecoVar << " - 1;\n";
-        ss << qtdTab() << enderecoVar << " = " << pilha.back()[temp_new_val].endereco_memoria << ";\n";
-        
-        $$.label = temp_old_val; // O valor da expressão é o valor *antes* do decremento
-        $$.traducao = ss.str();
-    }
-
     // Regra para PRÉ-DECREMENTO (ex: --a)
     | TK_DECREMENTO TK_ID {
         string nomeVar = $2.label;
@@ -1562,7 +1707,7 @@ EXPR_TERM:
 		stringstream ss;
 		string var1 = $1.label;
 		string var2 = $3.label;
-		ss = veririficarTipo(var1, "*", var2);
+		ss = operar(var1, "*", var2);
 		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
@@ -1570,7 +1715,7 @@ EXPR_TERM:
 		stringstream ss;
 		string var1 = $1.label;
 		string var2 = $3.label;
-		ss = veririficarTipo(var1, "/", var2);
+		ss = operar(var1, "/", var2);
 		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
@@ -1578,7 +1723,7 @@ EXPR_TERM:
 		stringstream ss;
 		string var1 = $1.label;
 		string var2 = $3.label;
-		ss = veririficarTipo(var1, "%", var2);
+		ss = operar(var1, "%", var2);
 		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
@@ -1587,19 +1732,40 @@ EXPR_TERM:
 		$$.label = $1.label;
 		$$.traducao = $1.traducao;
 	}
+        // Regra para *=
+    | TK_ID TK_MULT_IGUAL EXPR {
+		stringstream ss;
+		string var1 = $1.label;
+		string var2 = $3.label;
+		ss = operar(var1, "*", var2);
+        string temp = "t" + to_string(tempVar-1);   		
+        ss << operar(var1, "=", temp).str(); // Atribuição
+        $$.label = "t" + to_string(tempVar-1);
+		$$.traducao = $3.traducao + ss.str();
+    }
+    // Regra para /=
+    | TK_ID TK_DIV_IGUAL EXPR {
+		stringstream ss;
+		string var1 = $1.label;
+		string var2 = $3.label;
+		ss = operar(var1, "/", var2);
+        string temp = "t" + to_string(tempVar-1);   		
+        ss << operar(var1, "=", temp).str(); // Atribuição
+        $$.label = "t" + to_string(tempVar-1);
+		$$.traducao = $3.traducao + ss.str();
+    }
 
 ;
-
 EXPR_LOG:
 	EXPR_LOG TK_AND EXPR_REL %prec TK_AND {
 		stringstream ss;
-		ss = veririficarTipo($1.label, "&&", $3.label);
+		ss = operar($1.label, "&&", $3.label);
 		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
 	| EXPR_LOG TK_OR EXPR_REL %prec TK_OR {
 		stringstream ss;
-		ss = veririficarTipo($1.label, "||", $3.label);
+		ss = operar($1.label, "||", $3.label);
 		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
@@ -1611,37 +1777,37 @@ EXPR_LOG:
 EXPR_REL:
 	EXPR_REL TK_IGUAL EXPR_REL %prec TK_IGUAL {
 		stringstream ss;
-		ss = veririficarTipo($1.label, "==", $3.label);
+		ss = operar($1.label, "==", $3.label);
 		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
 	| EXPR_REL TK_DIFERENTE EXPR_REL %prec TK_DIFERENTE {
 		stringstream ss;
-		ss = veririficarTipo($1.label, "!=", $3.label);
+		ss = operar($1.label, "!=", $3.label);
 		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
 	| EXPR_REL '>' EXPR_REL %prec '>' {
 		stringstream ss;
-		ss = veririficarTipo($1.label, ">", $3.label);
+		ss = operar($1.label, ">", $3.label);
 		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
 	| EXPR_REL '<' EXPR_REL %prec '<' {
 		stringstream ss;	
-		ss = veririficarTipo($1.label, "<", $3.label);
+		ss = operar($1.label, "<", $3.label);
 		$$.label = "t" + to_string(tempVar-1);		
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
 	| EXPR_REL TK_MAIOR_IGUAL EXPR_REL %prec TK_MAIOR_IGUAL {
 		stringstream ss;
-		ss = veririficarTipo($1.label, ">=", $3.label);
+		ss = operar($1.label, ">=", $3.label);
 		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
 	| EXPR_REL TK_MENOR_IGUAL EXPR_REL %prec TK_MENOR_IGUAL {
 		stringstream ss;
-		ss = veririficarTipo($1.label, "<=", $3.label);
+		ss = operar($1.label, "<=", $3.label);
 		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $1.traducao + $3.traducao + ss.str();
 	}
@@ -1653,7 +1819,8 @@ EXPR_REL:
 EXPR_NOT:
 	'!' EXPR_NOT %prec '!' {
 		stringstream ss;
-		ss = veririficarTipo($2.label, "!", "");
+		ss = operar
+    ($2.label, "!", "");
 		$$.label = "t" + to_string(tempVar-1);
 		$$.traducao = $2.traducao + ss.str();
 	}
@@ -1685,6 +1852,7 @@ EXPR_ATOM:
         string temp = newTemp(tipo_num);
         string num = $1.traducao;
         if(tipo_num == "int")  pilha[pilha.size()-1][temp].numero = stoi(num);
+        if(stoi(num) < 0) pilha[pilha.size()-1][temp].numero = -2; 
         pilha[pilha.size()-1][temp].inicializado = true;
         stringstream ss;
         ss << qtdTab() << temp << " = " << $1.traducao << ";\n";
@@ -1720,7 +1888,9 @@ EXPR_ATOM:
         string chave_temp_sl = newTemp("string", false, true);
         string c_nome_sl = pilha[pilha.size()-1][chave_temp_sl].endereco_memoria;
         stringstream ss_code;
-        ss_code << qtdTab() << c_nome_sl << " = (char*)malloc(" << $1.label.length() + 1 << ");\n";
+        int multiplicador = (($1.label.length() + 1)/16)+1;
+        pilha[buscarVariavel(chave_temp_sl)][chave_temp_sl].contador = multiplicador*16; // Armazena o tamanho do string literal
+        ss_code << qtdTab() << c_nome_sl << " = (char*)malloc(" << multiplicador * 16 << ");\n";
         ss_code << qtdTab() << "strcpy(" << c_nome_sl << ", " << $1.traducao << ");\n";
         $$.label = chave_temp_sl;
         $$.traducao = ss_code.str();
@@ -1804,10 +1974,10 @@ EXPR_ATOM:
         
         ss << qtdTab() << temp1 << " = " << pilha[buscarVariavel(linha)][linha].endereco_memoria << " * " << pilha[buscarVariavel(nome)][nome].dimensoes[1] << ";\n";
         ss << qtdTab() << temp2 << " = " << temp1 << " + " << pilha[buscarVariavel(coluna)][coluna].endereco_memoria << ";\n"; 
-        ss << qtdTab() << temp2 << " = " << pilha[buscarVariavel(nome)][nome].endereco_memoria << "[" << temp2 << "];\n";
+        ss << qtdTab() << temp3 << " = " << pilha[buscarVariavel(nome)][nome].endereco_memoria << "[" << temp2 << "];\n";
 
         $$.traducao = ss.str();
-        $$.label = temp2;
+        $$.label = temp3;
     }
     // NOVA REGRA PARA ACESSAR UM MEMBRO DE CONJUNTO
     | TK_ID TK_PONTO TK_ID {
@@ -1887,6 +2057,29 @@ EXPR_ATOM:
         ss << ");\n"; // Chamada da função
         $$.traducao = ss.str();
     }
+        | TK_ID TK_INCREMENTO {
+		string var1 = $1.label;
+		string var2 = newTemp(pilha[buscarVariavel(var1)][var1].tipo);
+        stringstream ss;
+        ss << qtdTab() << var2 << " = " << "1;\n"; // Cria uma temporária com valor 1
+		ss << operar(var1, "+", var2).str(); // Operação de incremento
+        string temp = "t" + to_string(tempVar-1);   		
+        ss << operar(var1, "=", temp).str(); // Atribuição
+        $$.label = "t" + to_string(tempVar-1);
+		$$.traducao = ss.str();
+    }
+    // Regra para PÓS-DECREMENTO (ex: a--)
+    | TK_ID TK_DECREMENTO {
+		string var1 = $1.label;
+		string var2 = newTemp(pilha[buscarVariavel(var1)][var1].tipo);
+        stringstream ss;
+        ss << qtdTab() << var2 << " = " << "1;\n"; // Cria uma temporária com valor 1
+		ss << operar(var1, "-", var2).str(); // Operação de incremento
+        string temp = "t" + to_string(tempVar-1);   		
+        ss << operar(var1, "=", temp).str(); // Atribuição
+        $$.label = "t" + to_string(tempVar-1);
+		$$.traducao = ss.str();
+    }
 ;
 COVERT_TYPE:
     TK_TIPO_INT '(' EXPR ')' {
@@ -1957,7 +2150,8 @@ void adicionaVar(string nome, string tipo, int d, int N_d[2], bool temp, bool fu
     Escopo[nome].dimensoes[1] = N_d[1];
     Escopo[nome].temporaria = temp;
     Escopo[nome].eh_funcao = funcao;
-    Escopo[nome].malocada = false;
+    Escopo[nome].malocada = !temp;
+    Escopo[nome].numero = -1;
     // Gera o nome da variável C
     if (temp) Escopo[nome].endereco_memoria = "t" + to_string(tempVar++);
     else if (funcao) Escopo[nome].endereco_memoria = "f" + to_string(defFuncao++);
@@ -1997,7 +2191,7 @@ stringstream fecharPilha(stringstream& frees) {
                 if (info.eh_set) { // <-- ADICIONE ESTA CONDIÇÃO
                     ss << qtdTab() << "struct " << info.tipo << " " << info.endereco_memoria << ";\t //" << nome << "\n";
             } else if (info.num_dimensoes == 0)
-				    ss << qtdTab() << tipoTraducao[info.tipo] <<" "<< info.endereco_memoria << ";\t //"<< nome << "\n";
+				    ss << qtdTab() <<"void* "<< info.endereco_memoria << ";\t //"<< nome << "\n";
                 else
                     ss << qtdTab() << tipoTraducao[info.tipo] <<"* "<< info.endereco_memoria << ";\t //"<< nome << "\n";
             }
@@ -2082,7 +2276,7 @@ stringstream addFuncao(int num){
     stringstream ss;
     switch (num) {
         case 1: // Função para obter o tamanho de uma string
-            ss << qtdTab() << "void Len(const char* str) {\n";
+            ss << qtdTab() << "int Len(const char* str) {\n";
             ss << qtdTab(1)<< "int len;\n";
             ss << qtdTab(1)<< "int f0;\n";
             ss << qtdTab(1)<< "int f1;\n";
@@ -2115,8 +2309,11 @@ stringstream addFuncao(int num){
             ss << qtdTab(1) << "len = 0;\n";
             ss << qtdTab(1) << "buffer = (char*)malloc(capacity);\n";
             ss << qtdTab() << "\n";
+            ss << qtdTab(1) << "scanf_result = scanf(\" %c\", &c);\n";
+            ss << qtdTab(1) << "goto first_input_str_loop;\n";
             ss << qtdTab() << "input_str_loop_start:\n";
             ss << qtdTab(1) << "scanf_result = scanf(\"%c\", &c);\n";
+            ss << qtdTab(1) << "first_input_str_loop:;\n";
             ss << qtdTab(1) << "flag_is_terminator = scanf_result != 1;\n";
             ss << qtdTab(1) << "if (flag_is_terminator) goto input_str_loop_end;\n";
             ss << qtdTab(1) << "flag_is_newline = c == '\\n';\n";
@@ -2168,50 +2365,68 @@ stringstream addFuncao(int num){
     return ss;
 }
 
-stringstream veririficarTipo(string var1, string operador, string var2) {
+stringstream operar(string var1, string operador, string var2) {
 	stringstream ss;
 	string tipo1 = pilha[buscarVariavel(var1)][var1].tipo;
 	string tipo2 = "";
 	string endereco1 = pilha[buscarVariavel(var1)][var1].endereco_memoria;
 	string endereco2 = "";
-
 	if(var2 != ""){
 		endereco2 = pilha[buscarVariavel(var2)][var2].endereco_memoria; // Se não houver segundo operando, assume 0
 		tipo2 = pilha[buscarVariavel(var2)][var2].tipo; // Tipo padrão para operações unárias
 	}
-
 	if(tipo1 == "string" && tipo2 == "string" && operador == "+") {
 		operador = "<>";
 	}
-	
+
 	if(operador == "="){
-		if(tipo1 != tipo2){
-			if(tipo1 == "int" && tipo2 == "float"){
-				ss << qtdTab() << endereco1 << " = (int)" << endereco2 << ";\n";
-			}
-			else if(tipo1 == "float" && tipo2 == "int"){
-				ss << qtdTab() << endereco1 << " = (float)" << endereco2 << ";\n";
-			}
-			else{
-				cout << "Erro: Tipos incompatíveis para atribuição da variavel: " << var1 << "\n" ;
-				exit(1);
-			}
-		}
-		else{
-			ss << qtdTab() << endereco1 << " = " << endereco2 << ";\n";
-			
-			// verifica se endereco2 é malocada
-			if(pilha[buscarVariavel(var2)][var2].malocada){
-				// se for, endereco 1 deve ser malocada também
-				pilha[buscarVariavel(var1)][var1].malocada = true;
-				// e endereco2 deixa de ser malocada
-				pilha[buscarVariavel(var2)][var2].malocada = false;
-			}
-		}
+            pilha[buscarVariavel(var1)][var1].tipo = tipo2;
+            string temp = newTemp("int");
+            if(tipo2 == "any"){
+                cout << "A variavel '" << var2 << "Não possui tipo definido, portanto não pode ser atribuída a outra variável.\n";
+                exit(1);    
+            }
+            if(tipo1 != "any")
+                ss << qtdTab() << "free(" << endereco1 << ");\n"; // Libera a memória da variável 1
+            if(tipo2 != "string"){
+                ss << qtdTab() << temp << " = " << tipoTamanho[tipo2] <<";\n";
+                ss << qtdTab() << endereco1 << " = (" << tipoTraducao[tipo2] << "*)malloc(" << temp << ");\n";
+                ss << qtdTab() <<"((" << tipoTraducao[tipo2] << "*)"<< endereco1 << ")[0] = " << endereco2 << ";\n";
+            }
+            else{
+                if(pilha[buscarVariavel(var2)][var2].contador == 0){
+                    len = true; // Garante que a função Len() seja gerada
+                    string temp2 = newTemp("int");
+                    ss << qtdTab() << temp2 << " = Len(" << endereco2 << ");" << "\n";
+                    ss << qtdTab() << temp2 << " = " << temp2 << " + 1;\n"; // +1 para o terminador nulo
+                    ss << qtdTab() << temp << " = " << tipoTamanho[tipo2] << " * " << temp2 <<";\n";
+                }
+                else
+                    ss << qtdTab() << temp << " = " << tipoTamanho[tipo2] << " * " << pilha[buscarVariavel(var2)][var2].contador <<";\n";
+                tipo2 = "char";
+                ss << qtdTab() << endereco1 << " = (char*)malloc(" << temp << ");\n";
+                ss << qtdTab() << "strcpy((char*)" << endereco1 << ", (char*)" << endereco2 << ");\n";      
+            }  
+		
 		return ss;
-	}	
-	else if(operador == "+" || operador == "-" || operador == "*" || operador == "/" || operador == "%"){		
-		if(tipo1 != tipo2){
+	}
+    if(!pilha[buscarVariavel(var1)][var1].temporaria){
+        string temp = newTemp(tipo1);
+        endereco1 = "((" + tipoTraducao[tipo1] + "*)" + endereco1 + ")[0]";
+        ss << qtdTab() << temp << " = " << endereco1 << ";\n";
+        endereco1 = temp; // Atualiza o endereço para a temporária
+    }
+    if(!pilha[buscarVariavel(var2)][var2].temporaria){
+        string temp2 = newTemp(tipo2);
+        endereco2 = "((" + tipoTraducao[tipo2] + "*)" + endereco2 + ")[0]";
+        ss << qtdTab() << temp2 << " = " << endereco2 << ";\n";
+        endereco2 = temp2; // Atualiza o endereço para a temporária
+    } 
+
+	if(operador == "+" || operador == "-" || operador == "*" || operador == "/" || operador == "%"){		
+		
+          
+        if(tipo1 != tipo2){
 			string temp = newTemp("float");
 			string temp2 = newTemp("float");
 
@@ -2238,6 +2453,8 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 		}
 	}
 	else if(operador == "||" || operador == "&&"){
+
+
 		if(tipo1 != "bool" || tipo2 != "bool"){
 			cout << "Erro: Operador lógico " << operador << " só pode ser usado com tipos booleanos.\n";
 			exit(1);
@@ -2246,6 +2463,8 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 		ss << qtdTab() << temp << " = " << endereco1 << " " << operador << " " << endereco2 << ";\n";
 	}
 	else if(operador == "==" || operador == "!="){
+
+
 		if(tipo1 != tipo2){
 			if(tipo1 == "int" && tipo2 == "float"){
 				string temp = newTemp("float");
@@ -2274,6 +2493,8 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 		}
 	}
 	else if(operador == "!" && var2 == ""){
+
+
 		if(tipo1 != "bool"){
 			cout << "Erro: Operador lógico '!' só pode ser usado com tipos booleanos.\n";
 			exit(1);
@@ -2281,10 +2502,9 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 		string temp = newTemp("bool");
 		ss << qtdTab() << temp << " = !" << endereco1 << ";\n";
 	}
-
-	// operações com stings
-	// <> concatenação
 	else if(operador == "<>") {
+
+
 		// 1. Validar tipos e ativar a flag para a função Len (get_string_length)
 		len = true; // Garante que a função Len() seja gerada
 		if(tipo1 != "string" || tipo2 != "string"){
@@ -2305,8 +2525,8 @@ stringstream veririficarTipo(string var1, string operador, string var2) {
 		ss << qtdTab() << "strcpy(" << pilha[buscarVariavel(temp_result_str)][temp_result_str].endereco_memoria << ", " << endereco1 << ");\n";
 		ss << qtdTab() << "strcat(" << pilha[buscarVariavel(temp_result_str)][temp_result_str].endereco_memoria << ", " << endereco2 << ");\n";
  	}
-
 	else if(operador == ">" || operador == "<" || operador == ">=" || operador == "<="){
+
 		if(tipo1 != tipo2){
 			if(tipo1 == "int" && tipo2 == "float"){
 				string temp = newTemp("float");

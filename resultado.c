@@ -7,56 +7,45 @@
 
 int main(void)
 {
-	int d0;	 //a
-	int d1;	 //b
-	int d2;	 //c
-	int d3;	 //d
-	int d4;	 //e
-	int t0;
-	int t1;
-	int t10;
-	int t11;
-	int t2;
-	int t3;
-	int t4;
-	int t5;
-	int t6;
-	int t7;
-	int t8;
-	int t9;
+//INÍCIO DO FOR
+		void* d0;	 //a
+		int t0;
+		int t1;
+		int t2;
+		int t3;
+		int t4;
+		int t5;
+		int t6;
+		int t7;
+		int t8;
 
-	t0 = 5;
-	d0 = t0;
-	t1 = 10;
-	d2 = t1;
-	t2 = 9;
-	d3 = t2;
-	t3 = 10;
-	d4 = t3;
-	t4 = 10;
-	t5 = d0 + t4;
-	d0 = t5;
-	t6 = d2;
-	t7 = d2 - 1;
-	d2 = t7;
-	d3 = t6;
-	printf("%d", d0);
-	printf("\n");
-	t8 = d0;
-	t9 = d0 + 1;
-	d0 = t9;
-	d1 = t8;
-	t10 = 1;
-	t11 = d4 - t10;
-	d4 = t11;
-	printf("%d", d1);
-	printf("\n");
-	printf("%d", d0);
-	printf("\n");
-	printf("%d", d3);
-	printf("\n");
-	printf("%d", d4);
-	printf("\n");
+		t0 = 0;
+		t1 = 4;
+		d0 = (int*)malloc(t1);
+		((int*)d0)[0] = t0;
+		goto ForTest_0;
+
+		ForStep_0:
+		t5 = 1;
+		t6 = ((int*)d0)[0];
+		t7 = t6 + t5;
+		free(d0);
+		t8 = 4;
+		d0 = (int*)malloc(t8);
+		((int*)d0)[0] = t7;
+
+		ForTest_0:
+		t2 = 5;
+		t3 = ((int*)d0)[0];
+		t4 = t3 < t2;
+		if (!t4) goto ForEnd_0;
+
+			printf("%d", ((int*)d0)[0]);
+			printf("\n");
+
+		goto ForStep_0;
+		ForEnd_0:;
+//FIM DO FOR
 
 	
 	return 0;
