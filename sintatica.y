@@ -90,6 +90,7 @@ struct tabela{
 	bool malocada; //?
     bool eh_set;                // Indica se é um conjunto (struct)
     bool eh_funcao;             // Indica se é uma função
+    bool eh_parametro;           // Indica se é um parâmetro de função  
 };
 
 struct RotulosDeLaço {
@@ -136,6 +137,51 @@ string novoRotulo() {
     return "L" + to_string(defgoto++);
 }
 
+string gerarAssinaturaC(string nomes, string tipos) {
+    stringstream ss_nomes(nomes);
+    stringstream ss_tipos(tipos);
+    string nome, tipo;
+    stringstream assinatura;
+    bool primeiro = true;
+
+    while(getline(ss_nomes, nome, '|') && getline(ss_tipos, tipo, '|')) {
+        if (nome.empty()) continue;
+        if (!primeiro) {
+            assinatura << ", ";
+        }
+        string endereco = pilha.back()[nome].endereco_memoria;
+        if (tipo.find("[]") != string::npos) { // Se for um vetor
+            string tipo_base = tipo.substr(0, tipo.find("[]"));
+            assinatura << tipoTraducao[tipo_base] << "* " << endereco;
+        } else {
+            assinatura << tipoTraducao[tipo] << " " << endereco;
+        }
+        primeiro = false;
+    }
+    return assinatura.str();
+}
+
+// ... (na seção %{...%}, junto com outras funções auxiliares)
+
+// Gera a string de parâmetros para uma chamada de função em C (ex: "d0, t1")
+string gerarParametrosC(string labels) {
+    if (labels.empty()) return "";
+
+    stringstream ss_labels(labels);
+    string label;
+    stringstream resultado;
+    bool primeiro = true;
+
+    while(getline(ss_labels, label, '|')) {
+        if (!primeiro) {
+            resultado << ", ";
+        }
+        resultado << pilha[buscarVariavel(label)][label].endereco_memoria;
+        primeiro = false;
+    }
+    return resultado.str();
+}
+
 %}
 
 %token TK_NUM TK_ID TK_TIPO_INT TK_TIPO_FLOAT TK_MAIN
@@ -150,6 +196,13 @@ string novoRotulo() {
 %token TK_SWITCH TK_CASE TK_DEFAULT
 %token TK_IMPRIMIR_VETOR TK_QUICKSORT
 %token TK_CONJUNTO TK_PONTO TK_FUNCAO TK_RETURN
+%token TK_MAIS_IGUAL TK_MENOS_IGUAL TK_MULT_IGUAL TK_DIV_IGUAL // Operadores Compostos
+%token TK_INCREMENTO TK_DECREMENTO                             // Operadores Unários
+
+// Associatividade da direita para esquerda para atribuições
+%right '=' TK_MAIS_IGUAL TK_MENOS_IGUAL TK_MULT_IGUAL TK_DIV_IGUAL
+
+
 
 %start S
 
@@ -159,7 +212,7 @@ string novoRotulo() {
 %left '<' '>' TK_MAIOR_IGUAL TK_MENOR_IGUAL
 %left '+' '-'
 %left '*' '/'
-%right UMINUS '!'
+%right UMINUS '!' TK_INCREMENTO TK_DECREMENTO
 %nonassoc '(' ')'
 %nonassoc LOWER_THAN_ELSE
 %nonassoc TK_ELSE
@@ -479,7 +532,7 @@ DECLARACAO:
       | DEFINIR_CONJUNTO DECLARACAO{ //Linhas 472 até 474 são referentes a definição de conjuntos
         $$.traducao = $1.traducao + $2.traducao;
       }
-      | DEFINIR_FUNCAO DECLARACAO {
+      | DEFINIR_FUNCAO DECLARACAO { // <-- ADICIONE
         $$.traducao = $1.traducao + $2.traducao;
       }
 	  | 
@@ -689,8 +742,9 @@ BLOCO_FUNCAO:
 SAIDA_FUNCAO:
     TK_RETURN EXPR ';' {
         stringstream ss;
-        ss << qtdTab() << "return " << pilha[buscarVariavel($2.label)][$2.label].endereco_memoria << ";\n";
-        $$.label = pilha[buscarVariavel($2.label)][$2.label].tipo; // Tipo de retorno
+        ss << $2.traducao; // Gera o código da expressão a ser retornada
+        string enderecoExpr = pilha[buscarVariavel($2.label)][$2.label].endereco_memoria;
+        ss << qtdTab() << "return " << enderecoExpr << ";\n";
         $$.traducao = ss.str();
     }
     | /* vazio */ {
@@ -848,7 +902,71 @@ ATRIB:
         ss = veririficarTipo($1.label, "=", $3.label);
         $$.traducao = $3.traducao + ss.str();
     }
+    | TK_ID TK_MAIS_IGUAL EXPR {
+        string nomeVar = $1.label;
+        string enderecoVar = pilha[buscarVariavel(nomeVar)][nomeVar].endereco_memoria;
+        string tipoVar = pilha[buscarVariavel(nomeVar)][nomeVar].tipo;
+        
+        string temp = newTemp(tipoVar);
+        string enderecoTemp = pilha.back()[temp].endereco_memoria;
+        string enderecoExpr = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria;
 
+        stringstream ss;
+        ss << $3.traducao; // Gera código da expressão da direita
+        ss << qtdTab() << enderecoTemp << " = " << enderecoVar << " + " << enderecoExpr << ";\n";
+        ss << qtdTab() << enderecoVar << " = " << enderecoTemp << ";\n";
+        $$.traducao = ss.str();
+    }
+    // Regra para -=
+    | TK_ID TK_MENOS_IGUAL EXPR {
+        string nomeVar = $1.label;
+        string enderecoVar = pilha[buscarVariavel(nomeVar)][nomeVar].endereco_memoria;
+        string tipoVar = pilha[buscarVariavel(nomeVar)][nomeVar].tipo;
+        
+        string temp = newTemp(tipoVar);
+        string enderecoTemp = pilha.back()[temp].endereco_memoria;
+        string enderecoExpr = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria;
+
+        stringstream ss;
+        ss << $3.traducao; // Gera código da expressão da direita
+        ss << qtdTab() << enderecoTemp << " = " << enderecoVar << " - " << enderecoExpr << ";\n";
+        ss << qtdTab() << enderecoVar << " = " << enderecoTemp << ";\n";
+        $$.traducao = ss.str();
+    }
+
+    // Regra para *=
+    | TK_ID TK_MULT_IGUAL EXPR {
+        string nomeVar = $1.label;
+        string enderecoVar = pilha[buscarVariavel(nomeVar)][nomeVar].endereco_memoria;
+        string tipoVar = pilha[buscarVariavel(nomeVar)][nomeVar].tipo;
+        
+        string temp = newTemp(tipoVar);
+        string enderecoTemp = pilha.back()[temp].endereco_memoria;
+        string enderecoExpr = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria;
+
+        stringstream ss;
+        ss << $3.traducao;
+        ss << qtdTab() << enderecoTemp << " = " << enderecoVar << " * " << enderecoExpr << ";\n";
+        ss << qtdTab() << enderecoVar << " = " << enderecoTemp << ";\n";
+        $$.traducao = ss.str();
+    }
+
+    // Regra para /=
+    | TK_ID TK_DIV_IGUAL EXPR {
+        string nomeVar = $1.label;
+        string enderecoVar = pilha[buscarVariavel(nomeVar)][nomeVar].endereco_memoria;
+        string tipoVar = pilha[buscarVariavel(nomeVar)][nomeVar].tipo;
+        
+        string temp = newTemp(tipoVar);
+        string enderecoTemp = pilha.back()[temp].endereco_memoria;
+        string enderecoExpr = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria;
+
+        stringstream ss;
+        ss << $3.traducao;
+        ss << qtdTab() << enderecoTemp << " = " << enderecoVar << " / " << enderecoExpr << ";\n";
+        ss << qtdTab() << enderecoVar << " = " << enderecoTemp << ";\n";
+        $$.traducao = ss.str();
+    }
    | TK_ID '[' EXPR ']' '=' EXPR {
 
         string nome = $1.label;
@@ -957,6 +1075,7 @@ ATRIB:
         ss << qtdTab() << pilha[buscarVariavel(nome)][nome].endereco_memoria << "[" << temp2 << "] = " << $9.label << ";\n"; // Atribuição ao elemento da matriz
 
         $$.traducao = ss.str();
+        $$.label = temp2;
     }
     // NOVA REGRA PARA ATRIBUIÇÃO A MEMBRO DE CONJUNTO
     | TK_ID TK_PONTO TK_ID '=' EXPR {
@@ -1043,7 +1162,7 @@ LOOP:
         ss << qtdTab(1) << "goto " << rótuloIteração << ";\n"; // Volta para o passo de iteração
         
         ss << qtdTab(1) << rótuloFim << ":;\n";      // 6. Rótulo do BREAK
-        ss << qtdTab() << "}\n";
+        ss << qtdTab(1) << "}\n";
         $$.traducao = ss.str();
     }
 
@@ -1376,6 +1495,67 @@ EXPR_ARIT:
         $$.label = $1.label;
         $$.traducao = $1.traducao;
     }
+    | '-' EXPR %prec UMINUS {
+        string tipoExpr = pilha[buscarVariavel($2.label)][$2.label].tipo;
+        string temp = newTemp(tipoExpr);
+        string enderecoTemp = pilha.back()[temp].endereco_memoria;
+        string enderecoExpr = pilha[buscarVariavel($2.label)][$2.label].endereco_memoria;
+
+        stringstream ss;
+        ss << $2.traducao;
+        ss << qtdTab() << enderecoTemp << " = 0 - " << enderecoExpr << ";\n";
+        $$.label = temp;
+        $$.traducao = ss.str();
+    }
+    | TK_ID TK_INCREMENTO {
+        string nomeVar = $1.label;
+        string enderecoVar = pilha[buscarVariavel(nomeVar)][nomeVar].endereco_memoria;
+        string tipoVar = pilha[buscarVariavel(nomeVar)][nomeVar].tipo;
+
+        string temp_old_val = newTemp(tipoVar); // Guarda o valor antigo
+        string temp_new_val = newTemp(tipoVar); // Guarda o valor novo
+
+        stringstream ss;
+        ss << qtdTab() << pilha.back()[temp_old_val].endereco_memoria << " = " << enderecoVar << ";\n";
+        ss << qtdTab() << pilha.back()[temp_new_val].endereco_memoria << " = " << enderecoVar << " + 1;\n";
+        ss << qtdTab() << enderecoVar << " = " << pilha.back()[temp_new_val].endereco_memoria << ";\n";
+        
+        $$.label = temp_old_val; // O valor da expressão é o valor *antes* do incremento
+        $$.traducao = ss.str();
+    }
+    // Regra para PÓS-DECREMENTO (ex: a--)
+    | TK_ID TK_DECREMENTO {
+        string nomeVar = $1.label;
+        string enderecoVar = pilha[buscarVariavel(nomeVar)][nomeVar].endereco_memoria;
+        string tipoVar = pilha[buscarVariavel(nomeVar)][nomeVar].tipo;
+
+        string temp_old_val = newTemp(tipoVar); // Guarda o valor antigo
+        string temp_new_val = newTemp(tipoVar); // Guarda o valor novo
+
+        stringstream ss;
+        ss << qtdTab() << pilha.back()[temp_old_val].endereco_memoria << " = " << enderecoVar << ";\n";
+        ss << qtdTab() << pilha.back()[temp_new_val].endereco_memoria << " = " << enderecoVar << " - 1;\n";
+        ss << qtdTab() << enderecoVar << " = " << pilha.back()[temp_new_val].endereco_memoria << ";\n";
+        
+        $$.label = temp_old_val; // O valor da expressão é o valor *antes* do decremento
+        $$.traducao = ss.str();
+    }
+
+    // Regra para PRÉ-DECREMENTO (ex: --a)
+    | TK_DECREMENTO TK_ID {
+        string nomeVar = $2.label;
+        string enderecoVar = pilha[buscarVariavel(nomeVar)][nomeVar].endereco_memoria;
+        string tipoVar = pilha[buscarVariavel(nomeVar)][nomeVar].tipo;
+
+        string temp_new_val = newTemp(tipoVar);
+
+        stringstream ss;
+        ss << qtdTab() << pilha.back()[temp_new_val].endereco_memoria << " = " << enderecoVar << " - 1;\n";
+        ss << qtdTab() << enderecoVar << " = " << pilha.back()[temp_new_val].endereco_memoria << ";\n";
+        
+        $$.label = temp_new_val; // O valor da expressão é o valor *depois* do decremento
+        $$.traducao = ss.str();
+    }
 ;
 EXPR_TERM:
 		EXPR_TERM '*' EXPR_ATOM %prec '*' {
@@ -1658,7 +1838,7 @@ EXPR_ATOM:
         $$.label = temp; // O resultado desta expressão é a nova temporária
         $$.traducao = ss.str();
     }
-| TK_ID '(' ENTRADA_PARAMETROS ')' {
+    | TK_ID '(' ENTRADA_PARAMETROS ')' {
         string nome_funcao = $1.label;
         string parametros = $3.label;
         stringstream endereco_parametros;
@@ -1671,6 +1851,7 @@ EXPR_ATOM:
         int idx_parametros = std::distance(nomeFuncoes.begin(), it);
         ParametrosFuncao parametros_funcao = definicoesFuncoes[idx_parametros];
         string saida = saidaFuncoes[idx_parametros];
+        
         // comparara parametro do usario com o da funcao
         vector<string> parametros_usuario;
         stringstream ss_parametros(parametros);
@@ -1883,10 +2064,10 @@ string generateSwitchCases(string caseData, string switchVar, string switchId) {
         string temp_comp = newTemp("bool");
         
         ss << qtdTab(1) << temp_comp << " = " << var_switch << " == " << cases[i] << ";\n";
-        ss << qtdTab(1) << "if (!" << temp_comp << ") goto Case" << switchId << "_" << (i+1) << ";\n";
+        ss << qtdTab(1) << "if (!" << temp_comp << ") goto NextCase" << switchId << "_" << (i+1) << ";\n";
         ss << comandos[i];
         ss << qtdTab(1) << "goto EndSwitch" << switchId << ";\n";
-        ss << qtdTab(1) << "Case" << switchId << "_" << (i+1) << ":\n";
+        ss << qtdTab(1) << "NextCase" << switchId << "_" << (i+1) << ":\n";
     }
     
     // Default case se existir

@@ -90,13 +90,20 @@ ID {LETRA}({LETRA}|{DIGITO})*
 }
 
 "="         { return '='; }
-[+\-*/%]     { return *yytext; }
+[+\-*/%]    { return *yytext; }
 "=="        { return TK_IGUAL; }
 "!="        { return TK_DIFERENTE; }
 "<"         { return '<'; }
 "<="        { return TK_MENOR_IGUAL; }
 ">"         { return '>'; }
 ">="        { return TK_MAIOR_IGUAL; }
+"+="        { return TK_MAIS_IGUAL; }
+"-="        { return TK_MENOS_IGUAL; }
+"*="        { return TK_MULT_IGUAL; }
+"/="        { return TK_DIV_IGUAL; }
+"++"        { return TK_INCREMENTO; }
+"--"        { return TK_DECREMENTO; }
+
 
 "&&"       { return TK_AND; }
 "||"        { return TK_OR; }

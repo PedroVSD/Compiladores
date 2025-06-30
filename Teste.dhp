@@ -1,9 +1,18 @@
-function teste (int a[]){
-    return a[0];
-}
-
 int main() {
-    int a[5];
-    a[0] = 3;
-    output(teste(a));
+    int a = 5;
+    int b;
+    int c = 10;
+    int d = 9;
+    int e = 10;
+
+    a += 10; 
+    d = c--;
+    output(a);
+
+    b = a++; 
+    e -= 1;
+    output(b);
+    output(a);
+    output(d);
+    output(e);
 }
