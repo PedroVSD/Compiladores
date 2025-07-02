@@ -1,5 +1,23 @@
-main() {
-    for(var a = 0; a <5; a++){
-        output(a);
+function sum(int a[],  int tamanho){
+    var soma = 0;
+    
+    for(var i = 0; i < tamanho; i++){
+        soma += a[i];
     }
+
+    return soma;
+}
+
+main(){
+    var tamanho;
+
+    input(tamanho int);
+
+    int a[tamanho];
+
+    for(var i = 0; i < tamanho; i++){
+        input(a[i]);
+    }
+    var total = sum(a, tamanho);
+    output(total);
 }

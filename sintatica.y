@@ -29,6 +29,7 @@ vector<string> nomeFuncoes;
 void adicionaVar(string nome, string tipo, int d, int N_d[2], bool temp = false, bool funcao = false);
 string newTemp(string tipo, bool contador = false, bool malocada = false);
 int buscarVariavel(string nome);
+string verificaDeclaracao(string nome, string& nomeFinal);
 stringstream operar(string nome, string op, string valor);
 
 // Grupo de funções que mexem com a pilha
@@ -456,6 +457,9 @@ LISTA_VARIAVEIS:
         string c_nome = newTemp(tipo2, false, false);
         string var = pilha[idx][$1.label].endereco_memoria;
         stringstream ss_code;
+        pilha[idx][$1.label].inicializado = true; // Marca a variável como inicializada
+        pilha[idx][$1.label].numero =  INT_MAX; // Marca como variável temporária
+
         if (tipo2 == "string") {
             inputString = true;
             pilha[idx][c_nome].malocada = true; // Marca que a string foi alocada dinamicamente
@@ -482,6 +486,8 @@ LISTA_VARIAVEIS:
         string c_nome = newTemp(tipo2, false, false);
         string var = pilha[idx][$3.label].endereco_memoria;
         stringstream ss_code;
+        pilha[idx][$3.label].inicializado = true; // Marca a variável como inicializada
+        pilha[idx][$3.label].numero =  INT_MAX; // Marca como variável temporária
 
         if (tipo2 == "string") {
             inputString = true; 
@@ -506,6 +512,7 @@ LISTA_VARIAVEIS:
         string endereco_vetor = pilha[buscarVariavel($1.label)][$1.label].endereco_memoria;
         string nome = $1.label;
         int idx = pilha[buscarVariavel($3.label)][$3.label].numero;
+        string tamanho = $3.label;
 
         if(pilha[buscarVariavel(nome)][nome].num_dimensoes != 1) {
             cout << "O vetor '" << nome << "' deve ser unidimensional.\n";
@@ -540,7 +547,8 @@ LISTA_VARIAVEIS:
         else {
             ss_code << qtdTab() << "scanf(\"" << tipomascara[tipo] << "\", &" << temp << ");\n";
         }
-        ss_code << qtdTab() << endereco_vetor << "[" << pilha[buscarVariavel($3.label)][$3.label].endereco_memoria << "] = " << temp << ";\n";
+        ss_code << verificaDeclaracao(tamanho, tamanho);
+        ss_code << qtdTab() << endereco_vetor << "[" << pilha[buscarVariavel(tamanho)][tamanho].endereco_memoria << "] = " << temp << ";\n";
         $$.traducao = ss_code.str();
     }
     | LISTA_VARIAVEIS ',' TK_ID '[' EXPR ']'{
@@ -551,6 +559,7 @@ LISTA_VARIAVEIS:
         string endereco_vetor = pilha[buscarVariavel($3.label)][$3.label].endereco_memoria;
         string nome = $3.label;
         int idx = pilha[buscarVariavel($3.label)][$3.label].numero;
+        string tamanho = $5.label;
         
         if(pilha[buscarVariavel(nome)][nome].num_dimensoes != 1) {
             cout << "O vetor '" << nome << "' deve ser unidimensional.\n";
@@ -585,7 +594,8 @@ LISTA_VARIAVEIS:
         else {
             ss_code << qtdTab() << "scanf(\"" << tipomascara[tipo] << "\", &" << temp << ");\n";
         }
-        ss_code << qtdTab() << endereco_vetor << "[" << pilha[buscarVariavel($5.label)][$5.label].endereco_memoria << "] = " << temp << ";\n";
+        ss_code << verificaDeclaracao(tamanho, tamanho);
+        ss_code << qtdTab() << endereco_vetor << "[" << pilha[buscarVariavel(tamanho)][tamanho].endereco_memoria << "] = " << temp << ";\n";
         $$.traducao = $1.traducao + ss_code.str();
     }
     | TK_ID '[' EXPR ']' '[' EXPR ']'{
@@ -597,6 +607,8 @@ LISTA_VARIAVEIS:
         string nome = $1.label;
         int idx_linha = pilha[buscarVariavel($3.label)][$3.label].numero;
         int idx_coluna = pilha[buscarVariavel($6.label)][$6.label].numero;
+        string tamanho_linha = $3.label;
+        string tamanho_coluna = $6.label;
 
         if(pilha[buscarVariavel(nome)][nome].num_dimensoes != 2) {
             cout << "A matriz '" << nome << "' deve ser bidimensional.\n";
@@ -632,10 +644,12 @@ LISTA_VARIAVEIS:
         else {
             ss_code << qtdTab() << "scanf(\"" << tipomascara[tipo] << "\", &" << temp << ");\n";
         }
+        ss_code << verificaDeclaracao(tamanho_linha, tamanho_linha);
+        ss_code << verificaDeclaracao(tamanho_coluna, tamanho_coluna);
         string temp2 = newTemp("int"); // Temporária para o cálculo do offset
         string temp3 = newTemp("int"); // Temporária para o cálculo do offset
-        ss_code << qtdTab() << temp2 << " = " << pilha[buscarVariavel($3.label)][$3.label].endereco_memoria << " * " << pilha[buscarVariavel(nome)][nome].dimensoes[1] << ";\n";
-        ss_code << qtdTab() << temp3 << " = " << temp2 << " + " << pilha[buscarVariavel($6.label)][$6.label].endereco_memoria << ";\n";
+        ss_code << qtdTab() << temp2 << " = " << pilha[buscarVariavel(tamanho_linha)][tamanho_linha].endereco_memoria << " * " << pilha[buscarVariavel(nome)][nome].dimensoes[1] << ";\n";
+        ss_code << qtdTab() << temp3 << " = " << temp2 << " + " << pilha[buscarVariavel(tamanho_coluna)][tamanho_coluna].endereco_memoria << ";\n";
         ss_code << qtdTab() << pilha[buscarVariavel(nome)][nome].endereco_memoria << "[" << temp3 << "] = " << temp << ";\n"; // Atribuição ao elemento da matriz
    
         $$.traducao = ss_code.str();
@@ -649,6 +663,8 @@ LISTA_VARIAVEIS:
         string nome = $3.label;
         int idx_linha = pilha[buscarVariavel($5.label)][$5.label].numero;
         int idx_coluna = pilha[buscarVariavel($8.label)][$8.label].numero;
+        string tamanho_linha = $5.label;
+        string tamanho_coluna = $8.label;
 
         if(pilha[buscarVariavel(nome)][nome].num_dimensoes != 2) {
             cout << "A matriz '" << nome << "' deve ser bidimensional.\n";
@@ -684,10 +700,12 @@ LISTA_VARIAVEIS:
         else {
             ss_code << qtdTab() << "scanf(\"" << tipomascara[tipo] << "\", &" << temp << ");\n";
         }
+        ss_code << verificaDeclaracao(tamanho_linha, tamanho_linha);
+        ss_code << verificaDeclaracao(tamanho_coluna, tamanho_coluna);
         string temp2 = newTemp("int"); // Temporária para o cálculo do offset
         string temp3 = newTemp("int"); // Temporária para o cálculo do offset
-        ss_code << qtdTab() << temp2 << " = " << pilha[buscarVariavel($5.label)][$5.label].endereco_memoria << " * " << pilha[buscarVariavel(nome)][nome].dimensoes[1] << ";\n";
-        ss_code << qtdTab() << temp3 << " = " << temp2 << " + " << pilha[buscarVariavel($8.label)][$8.label].endereco_memoria << ";\n";
+        ss_code << qtdTab() << temp2 << " = " << pilha[buscarVariavel(tamanho_linha)][tamanho_linha].endereco_memoria << " * " << pilha[buscarVariavel(nome)][nome].dimensoes[1] << ";\n";
+        ss_code << qtdTab() << temp3 << " = " << temp2 << " + " << pilha[buscarVariavel(tamanho_coluna)][tamanho_coluna].endereco_memoria << ";\n";
         ss_code << qtdTab() << pilha[buscarVariavel(nome)][nome].endereco_memoria << "[" << temp3 << "] = " << temp << ";\n"; // Atribuição ao elemento da matriz
         $$.traducao = $1.traducao + ss_code.str();
     }
@@ -918,8 +936,9 @@ SAIDA_FUNCAO:
         stringstream ss;
         string tipo = pilha[buscarVariavel($2.label)][$2.label].tipo;
         ss << $2.traducao; // Gera o código da expressão a ser retornada
-        string enderecoExpr = pilha[buscarVariavel($2.label)][$2.label].endereco_memoria;
-        ss << qtdTab() << "return " << enderecoExpr << ";\n";
+        string enderecoExpr = $2.label; // Endereço da expressão a ser retornada
+        ss << verificaDeclaracao(enderecoExpr, enderecoExpr); // Verifica se a variável foi declarada
+        ss << qtdTab() << "return " << pilha[buscarVariavel(enderecoExpr)][enderecoExpr].endereco_memoria << ";\n";
         $$.label = tipo; // Tipo de retorno da função
         $$.traducao = ss.str();
     }
@@ -931,13 +950,21 @@ SAIDA_FUNCAO:
 
 ENTRADA_PARAMETROS:
     ENTRADA_PARAMETROS ',' EXPR {
-        $$.label = $1.label + "," + $3.label;
-        $$.traducao = $1.traducao + $3.traducao;
+        stringstream ss;
+        ss << $1.traducao;
+        string nome = $3.label;
+        ss << $3.traducao; // Inclui a tradução da expressão
+        ss << verificaDeclaracao(nome, nome);
+        $$.label = $1.label + "," + nome;
+        $$.traducao = ss.str();
     }
     | EXPR {
-        string tipo = pilha[buscarVariavel($1.label)][$1.label].tipo;
-        $$.label = $1.label;
-        $$.traducao = $1.traducao;
+        stringstream ss;
+        ss << $1.traducao;
+        string nome = $1.label;
+        ss << verificaDeclaracao(nome, nome);
+        $$.label = nome;
+        $$.traducao = ss.str();
     }
     | /* vazio */ {
         $$.label = "";
@@ -1009,10 +1036,12 @@ DECLAR_VAR:
 
         stringstream ss;
         ss << $4.traducao; // Inclui a expressão que calcula o tamanho do vetor
+        ss << verificaDeclaracao(tamanho, tamanho);
+
         string endereco = pilha[buscarVariavel(nome_vetor)][nome_vetor].endereco_memoria;
         string temp = newTemp("int");
         if(tipo_elemento == "string") tipo_elemento = "char"; 
-        ss << qtdTab() << temp << " = " << tamanho << " * " << tipoTamanho[tipo_elemento] << ";\n";
+        ss << qtdTab() << temp << " = " << pilha[buscarVariavel(tamanho)][tamanho].endereco_memoria << " * " << tipoTamanho[tipo_elemento] << ";\n";
         ss << qtdTab() << endereco << " = (" << tipoTraducao[tipo_elemento] << "*)malloc(" << temp << ");\n";
 
         $$.traducao = ss.str();
@@ -1045,6 +1074,10 @@ DECLAR_VAR:
         stringstream ss;
         ss << $4.traducao; // Inclui a expressão que calcula o número de linhas
         ss << $7.traducao; // Inclui a expressão que calcula o número de colunas
+
+        ss << verificaDeclaracao(linha, linha);
+        ss << verificaDeclaracao(colunas, colunas);
+
         // Calcula o tamanho total da matriz
         string endereco = pilha[buscarVariavel(nome_matriz)][nome_matriz].endereco_memoria;   
         string temp1 = newTemp("int");
@@ -1127,8 +1160,9 @@ ATRIB:
         ss << $3.traducao; // Código do índice
         ss << $6.traducao; // Código da expressão à direita
 
+        ss << verificaDeclaracao(idx, idx);
         string new_temp = newTemp(tipo1);
-        ss << qtdTab() << new_temp << " = " << idx << ";\n"; // Cria uma temporária para o índice
+        ss << qtdTab() << new_temp << " = " << pilha[buscarVariavel(idx)][idx].endereco_memoria << ";\n"; // Cria uma temporária para o índice
         ss << qtdTab() << pilha[buscarVariavel(nome)][nome].endereco_memoria << "[" << new_temp << "] = " << $6.label << ";\n";
         
 
@@ -1181,6 +1215,10 @@ ATRIB:
         ss << $3.traducao; // Código do primeiro índice (linha)
         ss << $6.traducao; // Código do segundo índice (coluna)
         ss << $9.traducao; // Código da expressão à direita
+
+
+        ss << verificaDeclaracao(idx_linha, idx_linha);
+        ss << verificaDeclaracao(idx_coluna, idx_coluna);
 
         string temp = newTemp("int"); // Temporária para o cálculo do offset
         string temp2 = newTemp("int"); // Temporária para o cálculo do offset
@@ -1916,14 +1954,15 @@ EXPR_ATOM:
             cout << "Erro: Acesso a vetor '" << nome << "' deve ser unidimensional.\n";
             exit(1);
         }
-        if(pilha[buscarVariavel(indice)][indice].numero < 0 || pilha[buscarVariavel(indice)][indice].numero >= pilha[buscarVariavel(nome)][nome].dimensoes[0]) {
+        if((pilha[buscarVariavel(indice)][indice].numero < 0 || pilha[buscarVariavel(indice)][indice].numero >= pilha[buscarVariavel(nome)][nome].dimensoes[0]) && pilha[buscarVariavel(indice)][indice].numero != -1) {
             cout << "Erro: Índice '" << indice << "' fora dos limites do vetor '" << nome << "'.\n";
             exit(1);
         }
         string temp = newTemp(tipo);
         stringstream ss;
         ss << $3.traducao;
-        ss << qtdTab() << temp << " = " << pilha[buscarVariavel(nome)][nome].endereco_memoria << "[" << $3.label << "];\n";
+        ss << verificaDeclaracao(indice, indice);
+        ss << qtdTab() << temp << " = " << pilha[buscarVariavel(nome)][nome].endereco_memoria << "[" << pilha[buscarVariavel(indice)][indice].endereco_memoria << "];\n";
         $$.traducao = ss.str();
         $$.label = temp;
     }
@@ -1971,6 +2010,8 @@ EXPR_ATOM:
         stringstream ss;
         ss << $3.traducao; // Código para calcular o índice da linha
         ss << $6.traducao; // Código para calcular o índice da coluna
+        ss << verificaDeclaracao(linha, linha);
+        ss << verificaDeclaracao(coluna, coluna);
         
         ss << qtdTab() << temp1 << " = " << pilha[buscarVariavel(linha)][linha].endereco_memoria << " * " << pilha[buscarVariavel(nome)][nome].dimensoes[1] << ";\n";
         ss << qtdTab() << temp2 << " = " << temp1 << " + " << pilha[buscarVariavel(coluna)][coluna].endereco_memoria << ";\n"; 
@@ -2154,7 +2195,11 @@ void adicionaVar(string nome, string tipo, int d, int N_d[2], bool temp, bool fu
     Escopo[nome].numero = -1;
     // Gera o nome da variável C
     if (temp) Escopo[nome].endereco_memoria = "t" + to_string(tempVar++);
-    else if (funcao) Escopo[nome].endereco_memoria = "f" + to_string(defFuncao++);
+    else if (funcao){
+        Escopo[nome].endereco_memoria = "f" + to_string(defFuncao++);
+        Escopo[nome].malocada = false; // Funções não são malocadas
+        Escopo[nome].temporaria = true;
+    }
     else Escopo[nome].endereco_memoria = "d" + to_string(defVar++);
 }
 
@@ -2185,7 +2230,7 @@ stringstream fecharPilha(stringstream& frees) {
 
 	if(defbloco > 0){
 		for(const auto& [nome, info] : pilha.back()) {
-			if(info.temporaria)
+			if(info.temporaria && !info.eh_funcao)
 				ss << qtdTab() << tipoTraducao[info.tipo] <<" "<< info.endereco_memoria << ";\n";
 			else if(!info.eh_funcao) {
                 if (info.eh_set) { // <-- ADICIONE ESTA CONDIÇÃO
@@ -2363,6 +2408,24 @@ stringstream addFuncao(int num){
             break;
             }
     return ss;
+}
+
+string verificaDeclaracao(string nome, string& nomeFinal){
+    if (buscarVariavel(nome) == -1) {
+        cout << "Erro: Variável '" << nome << "' não declarada.\n";
+        exit(1);
+    }
+    stringstream ss;
+    if(!pilha[buscarVariavel(nome)][nome].temporaria && !pilha[buscarVariavel(nome)][nome].eh_funcao && !pilha[buscarVariavel(nome)][nome].eh_set && pilha[buscarVariavel(nome)][nome].num_dimensoes == 0){
+        string tipo = pilha[buscarVariavel(nome)][nome].tipo;       
+        string temp = newTemp(tipo);
+        if(tipo == "string") tipo = "char"; // Converte string para char para o código C
+        string endereco = pilha[buscarVariavel(nome)][nome].endereco_memoria;
+        endereco = "((" + tipoTraducao[tipo] + "*)" + endereco + ")[0]";
+        ss << qtdTab() << temp << " = " << endereco << ";\n";
+        nomeFinal = temp; // Atualiza o nome final para a temporária
+    }
+    return ss.str();
 }
 
 stringstream operar(string var1, string operador, string var2) {
